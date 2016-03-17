@@ -14,5 +14,6 @@ Here are versions of Python packages, that we used:
 - python-dateutil==2.5.0
 
 Basic usage:
+================
 
 `python basecall.py <list of fast5 files>`
