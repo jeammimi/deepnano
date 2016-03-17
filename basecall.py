@@ -126,11 +126,17 @@ if "all" in types or "2d" in types:
 assert do_template or do_complement or do_2d, "Nothing to do"
 
 if do_template:
+  print "loading template net"
   temp_net = RnnPredictor(args.template_net)
+  print "done"
 if do_complement:
+  print "loading complement net"
   comp_net = RnnPredictor(args.complement_net)
+  print "done"
 if do_2d:
+  print "loading 2D net"
   big_net = RnnPredictor(args.big_net)
+  print "done"
 
 chars = "ACGT"
 mapping = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}
