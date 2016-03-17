@@ -13,3 +13,6 @@ Here are versions of Python packages, that we used:
 - Theano==0.7.0
 - python-dateutil==2.5.0
 
+Basic usage:
+
+`python basecall.py <list of fast5 files>`
