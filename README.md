@@ -15,6 +15,7 @@ Ecoli and tested on other half of Ecoli and Klebsiela):
 | 2D reads         | 86.8%           | 88.4%          | 84.8%                | 86.5%               |
 
 Links to datasets with reads:
+
 - http://www.ebi.ac.uk/ena/data/view/ERR1147230
 - https://www.ebi.ac.uk/ena/data/view/SAMEA3713789
 
