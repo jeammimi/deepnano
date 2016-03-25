@@ -3,7 +3,7 @@
 DeepNano is alternative basecaller for Oxford Nanopore MinION reads
 based on deep recurrent neural networks.
 
-Currently it works with SQK-MAP-006 chemistry.
+Currently it works with SQK-MAP-006 chemistry and as a postprocessor for Metrichor.
 
 Here are our benchmarks, which compare mapping accuracy (we trained on reads which align to one half on the
 Ecoli and tested on other half of Ecoli and Klebsiela):
