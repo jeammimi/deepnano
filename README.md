@@ -12,7 +12,7 @@ Ecoli and tested on other half of Ecoli and Klebsiela):
 |------------------|-----------------|----------------|----------------------|---------------------|
 | Template reads   | 71.3%           | 77.9%          | 68.1%                | 76.3%               |
 | Complement reads | 71.4%           | 76.4%          | 69.5%                | 75.7%               |
-| 2D reads         | 86.8%           | 88.4%          | 84.8%                | 86.5%               |
+| 2D reads         | 86.8%           | 88.5%          | 84.8%                | 86.7%               |
 
 Links to datasets with reads:
 
