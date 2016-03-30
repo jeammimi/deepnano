@@ -3,9 +3,9 @@
 DeepNano is alternative basecaller for Oxford Nanopore MinION reads
 based on deep recurrent neural networks.
 
-Currently it works with SQK-MAP-006 chemistry and as a postprocessor for Metrichor.
+Currently it works with SQK-MAP-006 and SQK-MAP-005 chemistry and as a postprocessor for Metrichor.
 
-Here are our benchmarks, which compare mapping accuracy (we trained on reads which align to one half on the
+Here are our benchmarks for SQK-MAP-006 chemistry, which compare mapping accuracy (we trained on reads which align to one half on the
 Ecoli and tested on other half of Ecoli and Klebsiela):
 
 |                  | Ecoli Metrichor | Ecoli DeepNano | Klebsiella Metrichor | Klebsiella DeepNano |
@@ -36,9 +36,15 @@ Here are versions of Python packages, that we used:
 Basic usage:
 ================
 
+For SQK-MAP-006 chemistry just use:
+
 `python basecall.py <list of fast5 files>`
 
 It outputs basecalls for template, complement and 2D into file named output.fasta.
+
+For SQK-MAP-005 chemistry use:
+
+`python basecall.py --template_net nets_data/map5temp.npz --complement_net nets_data/map5comp.npz --big_net nets_data/map5-2d.npz <list of fast5 files>`
 
 Advanced arguments:
 =================
