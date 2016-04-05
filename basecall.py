@@ -34,14 +34,19 @@ def load_read_data(read_file):
     # No timing
     pass
 
+  base_loc = "Analyses/Basecall_2D_000"
   try:
-    ret["called_template"] = h5["Analyses/Basecall_2D_000/BaseCalled_template/Fastq"][()].split('\n')[1]
-    ret["called_complement"] = h5["Analyses/Basecall_2D_000/BaseCalled_complement/Fastq"][()].split('\n')[1]
+    events = h5["Analyses/Basecall_2D_000/BaseCalled_template/Events"]
+  except:
+    base_loc = "Analyses/Basecall_1D_000"
+
+  try:
+    ret["called_template"] = h5[base_loc+"/BaseCalled_template/Fastq"][()].split('\n')[1]
+    ret["called_complement"] = h5[base_loc+"/BaseCalled_complement/Fastq"][()].split('\n')[1]
     ret["called_2d"] = h5["Analyses/Basecall_2D_000/BaseCalled_2D/Fastq"][()].split('\n')[1]
   except Exception as e:
-    print "wat", e 
-    return None
-  events = h5["Analyses/Basecall_2D_000/BaseCalled_template/Events"]
+    pass
+  events = h5[base_loc+"/BaseCalled_template/Events"]
   ret["mp_template"] = []
   for e in events:
     if e["move"] == 1:
@@ -49,10 +54,10 @@ def load_read_data(read_file):
     if e["move"] == 2:
       ret["mp_template"].append(e["mp_state"][1:3])
   ret["mp_template"] = "".join(ret["mp_template"])
-  tscale = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_template"].attrs["scale"]
-  tscale_sd = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_template"].attrs["scale_sd"]
-  tshift = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_template"].attrs["shift"]
-  tdrift = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_template"].attrs["drift"]
+  tscale = h5[base_loc+"/Summary/basecall_1d_template"].attrs["scale"]
+  tscale_sd = h5[base_loc+"/Summary/basecall_1d_template"].attrs["scale_sd"]
+  tshift = h5[base_loc+"/Summary/basecall_1d_template"].attrs["shift"]
+  tdrift = h5[base_loc+"/Summary/basecall_1d_template"].attrs["drift"]
   index = 0.0
   ret["temp_events"] = []
   for e in events:
@@ -61,11 +66,11 @@ def load_read_data(read_file):
     length = e["length"]
     ret["temp_events"].append(preproc_event(mean, stdv, length))
     index += e["length"]
-  events = h5["Analyses/Basecall_2D_000/BaseCalled_complement/Events"]
-  cscale = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_complement"].attrs["scale"]
-  cscale_sd = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_complement"].attrs["scale_sd"]
-  cshift = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_complement"].attrs["shift"]
-  cdrift = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_complement"].attrs["drift"]
+  events = h5[base_loc+"/BaseCalled_complement/Events"]
+  cscale = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["scale"]
+  cscale_sd = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["scale_sd"]
+  cshift = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["shift"]
+  cdrift = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["drift"]
   index = 0.0
   ret["comp_events"] = []
   for e in events:
@@ -78,8 +83,8 @@ def load_read_data(read_file):
   ret["comp_events"] = np.array(ret["comp_events"], dtype=np.float32)
 
   al = h5["Analyses/Basecall_2D_000/BaseCalled_2D/Alignment"]
-  temp_events = h5["Analyses/Basecall_2D_000/BaseCalled_template/Events"]
-  comp_events = h5["Analyses/Basecall_2D_000/BaseCalled_complement/Events"]
+  temp_events = h5[base_loc+"/BaseCalled_template/Events"]
+  comp_events = h5[base_loc+"/BaseCalled_complement/Events"]
   ret["2d_events"] = []
   for a in al:
     ev = []
@@ -158,14 +163,17 @@ for i, read in enumerate(args.reads):
   if not data:  
     continue
   if args.output_orig:
-    print >>fo, ">%d_template" % i
-    print >>fo, data["called_template"]
-    print >>fo, ">%d_mp_template" % i
-    print >>fo, data["mp_template"]
-    print >>fo, ">%d_complement" % i
-    print >>fo, data["called_complement"]
-    print >>fo, ">%d_2d" % i
-    print >>fo, data["called_2d"]
+    try:
+      print >>fo, ">%d_template" % i
+      print >>fo, data["called_template"]
+      print >>fo, ">%d_mp_template" % i
+      print >>fo, data["mp_template"]
+      print >>fo, ">%d_complement" % i
+      print >>fo, data["called_complement"]
+      print >>fo, ">%d_2d" % i
+      print >>fo, data["called_2d"]
+    except:
+      pass
 
   temp_start = datetime.datetime.now()
   if do_template:
