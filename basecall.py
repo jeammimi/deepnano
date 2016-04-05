@@ -18,17 +18,21 @@ def load_read_data(read_file):
   h5 = h5py.File(read_file, "r")
   ret = {}
   
-  log = h5["Analyses/Basecall_2D_000/Log"][()]
-  temp_time = dateutil.parser.parse(re.search(r"(.*) Basecalling template.*", log).groups()[0])
-  comp_time = dateutil.parser.parse(re.search(r"(.*) Basecalling complement.*", log).groups()[0])
-  comp_end_time = dateutil.parser.parse(re.search(r"(.*) Aligning hairpin.*", log).groups()[0])
+  try:
+    log = h5["Analyses/Basecall_2D_000/Log"][()]
+    temp_time = dateutil.parser.parse(re.search(r"(.*) Basecalling template.*", log).groups()[0])
+    comp_time = dateutil.parser.parse(re.search(r"(.*) Basecalling complement.*", log).groups()[0])
+    comp_end_time = dateutil.parser.parse(re.search(r"(.*) Aligning hairpin.*", log).groups()[0])
 
-  start_2d_time = dateutil.parser.parse(re.search(r"(.*) Performing full 2D.*", log).groups()[0])
-  end_2d_time = dateutil.parser.parse(re.search(r"(.*) Workflow completed.*", log).groups()[0])
+    start_2d_time = dateutil.parser.parse(re.search(r"(.*) Performing full 2D.*", log).groups()[0])
+    end_2d_time = dateutil.parser.parse(re.search(r"(.*) Workflow completed.*", log).groups()[0])
 
-  ret["temp_time"] = comp_time - temp_time
-  ret["comp_time"] = comp_end_time - comp_time
-  ret["2d_time"] = end_2d_time - start_2d_time
+    ret["temp_time"] = comp_time - temp_time
+    ret["comp_time"] = comp_end_time - comp_time
+    ret["2d_time"] = end_2d_time - start_2d_time
+  except:
+    # No timing
+    pass
 
   try:
     ret["called_template"] = h5["Analyses/Basecall_2D_000/BaseCalled_template/Fastq"][()].split('\n')[1]
@@ -206,16 +210,19 @@ for i, read in enumerate(args.reads):
   time_2d = datetime.datetime.now() - start_2d
 
   if args.timing:
-    print "Events: %d/%d" % (len(data["temp_events"]), len(data["comp_events"]))
-    print "Our times: %f/%f/%f" % (temp_time.total_seconds(), comp_time.total_seconds(),
-       time_2d.total_seconds())
-    print "Our times per base: %f/%f/%f" % (
-      temp_time.total_seconds() / len(data["temp_events"]),
-      comp_time.total_seconds() / len(data["comp_events"]),
-      time_2d.total_seconds() / (len(data["comp_events"]) + len(data["temp_events"])))
-    print "Their times: %f/%f/%f" % (data["temp_time"].total_seconds(), data["comp_time"].total_seconds(), data["2d_time"].total_seconds())
-    print "Their times per base: %f/%f/%f" % (
-      data["temp_time"].total_seconds() / len(data["temp_events"]),
-      data["comp_time"].total_seconds() / len(data["comp_events"]),
-      data["2d_time"].total_seconds() / (len(data["comp_events"]) + len(data["temp_events"])))
-
+    try:
+      print "Events: %d/%d" % (len(data["temp_events"]), len(data["comp_events"]))
+      print "Our times: %f/%f/%f" % (temp_time.total_seconds(), comp_time.total_seconds(),
+         time_2d.total_seconds())
+      print "Our times per base: %f/%f/%f" % (
+        temp_time.total_seconds() / len(data["temp_events"]),
+        comp_time.total_seconds() / len(data["comp_events"]),
+        time_2d.total_seconds() / (len(data["comp_events"]) + len(data["temp_events"])))
+      print "Their times: %f/%f/%f" % (data["temp_time"].total_seconds(), data["comp_time"].total_seconds(), data["2d_time"].total_seconds())
+      print "Their times per base: %f/%f/%f" % (
+        data["temp_time"].total_seconds() / len(data["temp_events"]),
+        data["comp_time"].total_seconds() / len(data["comp_events"]),
+        data["2d_time"].total_seconds() / (len(data["comp_events"]) + len(data["temp_events"])))
+    except:
+      # Don't let timing throw us out
+      pass
