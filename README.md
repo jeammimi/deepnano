@@ -64,6 +64,9 @@ Usage without metrichor:
 Warning: Use at your own risk. The code is in heavy development
 and was not properly tested yet.
 
+First compile alignment code:
+`g++ -O2 -std=gnu++0x align_2d.cc -o align_2d`
+
 `python basecall_no_metrichor.py <list of fast5 files>`
 
 Arguments:
