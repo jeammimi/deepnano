@@ -46,66 +46,76 @@ def load_read_data(read_file):
     ret["called_2d"] = h5["Analyses/Basecall_2D_000/BaseCalled_2D/Fastq"][()].split('\n')[1]
   except Exception as e:
     pass
-  events = h5[base_loc+"/BaseCalled_template/Events"]
-  ret["mp_template"] = []
-  for e in events:
-    if e["move"] == 1:
-      ret["mp_template"].append(e["mp_state"][2])
-    if e["move"] == 2:
-      ret["mp_template"].append(e["mp_state"][1:3])
-  ret["mp_template"] = "".join(ret["mp_template"])
-  tscale = h5[base_loc+"/Summary/basecall_1d_template"].attrs["scale"]
-  tscale_sd = h5[base_loc+"/Summary/basecall_1d_template"].attrs["scale_sd"]
-  tshift = h5[base_loc+"/Summary/basecall_1d_template"].attrs["shift"]
-  tdrift = h5[base_loc+"/Summary/basecall_1d_template"].attrs["drift"]
-  index = 0.0
-  ret["temp_events"] = []
-  for e in events:
-    mean = (e["mean"] - tshift - index * tdrift) / tscale
-    stdv = e["stdv"] / tscale_sd
-    length = e["length"]
-    ret["temp_events"].append(preproc_event(mean, stdv, length))
-    index += e["length"]
-  events = h5[base_loc+"/BaseCalled_complement/Events"]
-  cscale = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["scale"]
-  cscale_sd = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["scale_sd"]
-  cshift = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["shift"]
-  cdrift = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["drift"]
-  index = 0.0
-  ret["comp_events"] = []
-  for e in events:
-    mean = (e["mean"] - cshift - index * cdrift) / cscale
-    stdv = e["stdv"] / cscale_sd
-    length = e["length"]
-    ret["comp_events"].append(preproc_event(mean, stdv, length))
-    index += e["length"]
-  ret["temp_events"] = np.array(ret["temp_events"], dtype=np.float32)
-  ret["comp_events"] = np.array(ret["comp_events"], dtype=np.float32)
-
-  al = h5["Analyses/Basecall_2D_000/BaseCalled_2D/Alignment"]
-  temp_events = h5[base_loc+"/BaseCalled_template/Events"]
-  comp_events = h5[base_loc+"/BaseCalled_complement/Events"]
-  ret["2d_events"] = []
-  for a in al:
-    ev = []
-    if a[0] == -1:
-      ev += [0, 0, 0, 0, 0]
-    else:
-      e = temp_events[a[0]]
-      mean = (e["mean"] - tshift - index * tdrift) / cscale
+  try:
+    events = h5[base_loc+"/BaseCalled_template/Events"]
+    ret["mp_template"] = []
+    for e in events:
+      if e["move"] == 1:
+        ret["mp_template"].append(e["mp_state"][2])
+      if e["move"] == 2:
+        ret["mp_template"].append(e["mp_state"][1:3])
+    ret["mp_template"] = "".join(ret["mp_template"])
+    tscale = h5[base_loc+"/Summary/basecall_1d_template"].attrs["scale"]
+    tscale_sd = h5[base_loc+"/Summary/basecall_1d_template"].attrs["scale_sd"]
+    tshift = h5[base_loc+"/Summary/basecall_1d_template"].attrs["shift"]
+    tdrift = h5[base_loc+"/Summary/basecall_1d_template"].attrs["drift"]
+    index = 0.0
+    ret["temp_events"] = []
+    for e in events:
+      mean = (e["mean"] - tshift - index * tdrift) / tscale
       stdv = e["stdv"] / tscale_sd
       length = e["length"]
-      ev += [1] + preproc_event(mean, stdv, length)
-    if a[1] == -1:
-      ev += [0, 0, 0, 0, 0]
-    else:
-      e = comp_events[a[1]]
+      ret["temp_events"].append(preproc_event(mean, stdv, length))
+      index += e["length"]
+    ret["temp_events"] = np.array(ret["temp_events"], dtype=np.float32)
+  except:
+    pass
+
+  try:
+    events = h5[base_loc+"/BaseCalled_complement/Events"]
+    cscale = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["scale"]
+    cscale_sd = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["scale_sd"]
+    cshift = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["shift"]
+    cdrift = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["drift"]
+    index = 0.0
+    ret["comp_events"] = []
+    for e in events:
       mean = (e["mean"] - cshift - index * cdrift) / cscale
       stdv = e["stdv"] / cscale_sd
       length = e["length"]
-      ev += [1] + preproc_event(mean, stdv, length)
-    ret["2d_events"].append(ev) 
-  ret["2d_events"] = np.array(ret["2d_events"], dtype=np.float32)
+      ret["comp_events"].append(preproc_event(mean, stdv, length))
+      index += e["length"]
+    ret["comp_events"] = np.array(ret["comp_events"], dtype=np.float32)
+  except:
+    pass
+
+  try:
+    al = h5["Analyses/Basecall_2D_000/BaseCalled_2D/Alignment"]
+    temp_events = h5[base_loc+"/BaseCalled_template/Events"]
+    comp_events = h5[base_loc+"/BaseCalled_complement/Events"]
+    ret["2d_events"] = []
+    for a in al:
+      ev = []
+      if a[0] == -1:
+        ev += [0, 0, 0, 0, 0]
+      else:
+        e = temp_events[a[0]]
+        mean = (e["mean"] - tshift - index * tdrift) / cscale
+        stdv = e["stdv"] / tscale_sd
+        length = e["length"]
+        ev += [1] + preproc_event(mean, stdv, length)
+      if a[1] == -1:
+        ev += [0, 0, 0, 0, 0]
+      else:
+        e = comp_events[a[1]]
+        mean = (e["mean"] - cshift - index * cdrift) / cscale
+        stdv = e["stdv"] / cscale_sd
+        length = e["length"]
+        ev += [1] + preproc_event(mean, stdv, length)
+      ret["2d_events"].append(ev) 
+    ret["2d_events"] = np.array(ret["2d_events"], dtype=np.float32)
+  except:
+    pass
 
   return ret
 
@@ -157,26 +167,31 @@ total_bases = [0, 0, 0]
 for i, read in enumerate(args.reads):
   try:
     data = load_read_data(read)
-  except:
+  except Exception as e:
     print "error at file", read
+    print e
     continue
   if not data:  
     continue
   if args.output_orig:
     try:
-      print >>fo, ">%d_template" % i
-      print >>fo, data["called_template"]
-      print >>fo, ">%d_mp_template" % i
-      print >>fo, data["mp_template"]
-      print >>fo, ">%d_complement" % i
-      print >>fo, data["called_complement"]
-      print >>fo, ">%d_2d" % i
-      print >>fo, data["called_2d"]
+      if "called_template" in data:
+        print >>fo, ">%d_template" % i
+        print >>fo, data["called_template"]
+      if "mp_template" in data:
+        print >>fo, ">%d_mp_template" % i
+        print >>fo, data["mp_template"]
+      if "called_complement" in data:
+        print >>fo, ">%d_complement" % i
+        print >>fo, data["called_complement"]
+      if "called_2d" in data:
+        print >>fo, ">%d_2d" % i
+        print >>fo, data["called_2d"]
     except:
       pass
 
   temp_start = datetime.datetime.now()
-  if do_template:
+  if do_template and "temp_events" in data:
     o1, o2 = temp_net.predict(data["temp_events"]) 
     o1m = (np.argmax(o1, 1))
     o2m = (np.argmax(o2, 1))
@@ -190,7 +205,7 @@ for i, read in enumerate(args.reads):
   temp_time = datetime.datetime.now() - temp_start
 
   comp_start = datetime.datetime.now()
-  if do_complement:
+  if do_complement and "comp_events" in data:
     o1c, o2c = comp_net.predict(data["comp_events"]) 
     o1cm = (np.argmax(o1c, 1))
     o2cm = (np.argmax(o2c, 1))
@@ -204,7 +219,7 @@ for i, read in enumerate(args.reads):
   comp_time = datetime.datetime.now() - comp_start
 
   start_2d = datetime.datetime.now()
-  if do_2d:
+  if do_2d and "2d_events" in data:
     o1c, o2c = big_net.predict(data["2d_events"]) 
     o1cm = (np.argmax(o1c, 1))
     o2cm = (np.argmax(o2c, 1))
