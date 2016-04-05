@@ -52,8 +52,25 @@ Advanced arguments:
 - `-h` - prints help message
 - `--template_net PATH` - path to network which basecalls template (has reasonable default)
 - `--complement_net PATH` - path to network which basecalls complement (has reasonable default)
-- `--2D_net PATH` - path to network which basecalls 2D (has reasonable default)
+- `--big_net PATH` - path to network which basecalls 2D (has reasonable default)
 - `--timing` - if set, display timing information for each read
 - `--type template/complement/2d/all` - type of basecalling output (defaults to all)
 - `--output FILENAME` - output filename
 - `--output_orig` - if set, outputs also Metrichor basecalls
+
+Usage without metrichor:
+================
+
+Warning: Use at your own risk. The code is in heavy development
+and was not properly tested yet.
+
+`python basecall_no_metrichor.py <list of fast5 files>`
+
+Arguments:
+- `-h` - prints help message
+- `--template_net PATH` - path to network which basecalls template (has reasonable default)
+- `--complement_net PATH` - path to network which basecalls complement (has reasonable default)
+- `--big_net PATH` - path to network which basecalls 2D (has reasonable default)
+- `--type template/complement/2d/all` - type of basecalling output (defaults to all)
+- `--output FILENAME` - output filename
+

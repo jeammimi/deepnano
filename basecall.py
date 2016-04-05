@@ -146,7 +146,11 @@ fo = open(args.output, "w")
 total_bases = [0, 0, 0]
 
 for i, read in enumerate(args.reads):
-  data = load_read_data(read)
+  try:
+    data = load_read_data(read)
+  except:
+    print "error at file", read
+    continue
   if not data:  
     continue
   if args.output_orig:
