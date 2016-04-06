@@ -13,28 +13,10 @@ from helpers import *
 def load_read_data(read_file):
   h5 = h5py.File(read_file, "r")
   ret = {}
-  
-  try:
-    log = h5["Analyses/Basecall_2D_000/Log"][()]
-    temp_time = dateutil.parser.parse(re.search(r"(.*) Basecalling template.*", log).groups()[0])
-    comp_time = dateutil.parser.parse(re.search(r"(.*) Basecalling complement.*", log).groups()[0])
-    comp_end_time = dateutil.parser.parse(re.search(r"(.*) Aligning hairpin.*", log).groups()[0])
 
-    start_2d_time = dateutil.parser.parse(re.search(r"(.*) Performing full 2D.*", log).groups()[0])
-    end_2d_time = dateutil.parser.parse(re.search(r"(.*) Workflow completed.*", log).groups()[0])
+  extract_timing(h5, ret)
 
-    ret["temp_time"] = comp_time - temp_time
-    ret["comp_time"] = comp_end_time - comp_time
-    ret["2d_time"] = end_2d_time - start_2d_time
-  except:
-    # No timing
-    pass
-
-  base_loc = "Analyses/Basecall_2D_000"
-  try:
-    events = h5["Analyses/Basecall_2D_000/BaseCalled_template/Events"]
-  except:
-    base_loc = "Analyses/Basecall_1D_000"
+  base_loc = get_base_loc(h5)
 
   try:
     ret["called_template"] = h5[base_loc+"/BaseCalled_template/Fastq"][()].split('\n')[1]
@@ -44,45 +26,17 @@ def load_read_data(read_file):
     pass
   try:
     events = h5[base_loc+"/BaseCalled_template/Events"]
-    ret["mp_template"] = []
-    for e in events:
-      if e["move"] == 1:
-        ret["mp_template"].append(e["mp_state"][2])
-      if e["move"] == 2:
-        ret["mp_template"].append(e["mp_state"][1:3])
-    ret["mp_template"] = "".join(ret["mp_template"])
-    tscale = h5[base_loc+"/Summary/basecall_1d_template"].attrs["scale"]
-    tscale_sd = h5[base_loc+"/Summary/basecall_1d_template"].attrs["scale_sd"]
-    tshift = h5[base_loc+"/Summary/basecall_1d_template"].attrs["shift"]
-    tdrift = h5[base_loc+"/Summary/basecall_1d_template"].attrs["drift"]
-    index = 0.0
-    ret["temp_events"] = []
-    for e in events:
-      mean = (e["mean"] - tshift - index * tdrift) / tscale
-      stdv = e["stdv"] / tscale_sd
-      length = e["length"]
-      ret["temp_events"].append(preproc_event(mean, stdv, length))
-      index += e["length"]
-    ret["temp_events"] = np.array(ret["temp_events"], dtype=np.float32)
+    tscale, tscale_sd, tshift, tdrift = extract_scaling(h5, "template", base_loc)
+    ret["temp_events"] = extract_1d_event_data(
+        h5, "template", base_loc, tscale, tscale_sd, tshift, tdrift)
   except:
     pass
 
   try:
-    events = h5[base_loc+"/BaseCalled_complement/Events"]
-    cscale = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["scale"]
-    cscale_sd = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["scale_sd"]
-    cshift = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["shift"]
-    cdrift = h5[base_loc+"/Summary/basecall_1d_complement"].attrs["drift"]
-    index = 0.0
-    ret["comp_events"] = []
-    for e in events:
-      mean = (e["mean"] - cshift - index * cdrift) / cscale
-      stdv = e["stdv"] / cscale_sd
-      length = e["length"]
-      ret["comp_events"].append(preproc_event(mean, stdv, length))
-      index += e["length"]
-    ret["comp_events"] = np.array(ret["comp_events"], dtype=np.float32)
-  except:
+    cscale, cscale_sd, cshift, cdrift = extract_scaling(h5, "complement", base_loc)
+    ret["comp_events"] = extract_1d_event_data(
+        h5, "complement", base_loc, cscale, cscale_sd, cshift, cdrift)
+  except Exception as e:
     pass
 
   try:
@@ -96,7 +50,7 @@ def load_read_data(read_file):
         ev += [0, 0, 0, 0, 0]
       else:
         e = temp_events[a[0]]
-        mean = (e["mean"] - tshift - index * tdrift) / cscale
+        mean = (e["mean"] - tshift) / cscale
         stdv = e["stdv"] / tscale_sd
         length = e["length"]
         ev += [1] + preproc_event(mean, stdv, length)
@@ -104,13 +58,14 @@ def load_read_data(read_file):
         ev += [0, 0, 0, 0, 0]
       else:
         e = comp_events[a[1]]
-        mean = (e["mean"] - cshift - index * cdrift) / cscale
+        mean = (e["mean"] - cshift) / cscale
         stdv = e["stdv"] / cscale_sd
         length = e["length"]
         ev += [1] + preproc_event(mean, stdv, length)
       ret["2d_events"].append(ev) 
     ret["2d_events"] = np.array(ret["2d_events"], dtype=np.float32)
-  except:
+  except Exception as e:
+    print e
     pass
 
   h5.close()
@@ -184,9 +139,6 @@ for i, read in enumerate(files):
       if "called_template" in data:
         print >>fo, ">%s_template" % basename
         print >>fo, data["called_template"]
-      if "mp_template" in data:
-        print >>fo, ">%s_mp_template" % basename
-        print >>fo, data["mp_template"]
       if "called_complement" in data:
         print >>fo, ">%s_complement" % basename
         print >>fo, data["called_complement"]
