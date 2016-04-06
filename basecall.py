@@ -117,17 +117,19 @@ def load_read_data(read_file):
   except:
     pass
 
+  h5.close()
   return ret
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--template_net', type=str, default="nets_data/map6temp.npz")
 parser.add_argument('--complement_net', type=str, default="nets_data/map6comp.npz")
 parser.add_argument('--big_net', type=str, default="nets_data/map6-2d-big.npz")
-parser.add_argument('reads', type=str, nargs='+')
+parser.add_argument('reads', type=str, nargs='*')
 parser.add_argument('--timing', action='store_true', default=False)
 parser.add_argument('--type', type=str, default="all", help="One of: template, complement, 2d, all, use comma to separate multiple options, eg.: template,complement")
 parser.add_argument('--output', type=str, default="output.fasta")
 parser.add_argument('--output_orig', action='store_true', default=False)
+parser.add_argument('--directory', type=str, default='', help="Directory where read files are stored")
 
 args = parser.parse_args()
 types = args.type.split(',')
@@ -143,6 +145,7 @@ if "all" in types or "2d" in types:
   do_2d = True
 
 assert do_template or do_complement or do_2d, "Nothing to do"
+assert len(args.reads) != 0 or len(args.directory) != 0, "Nothing to basecall"
 
 if do_template:
   print "loading template net"
@@ -164,7 +167,11 @@ fo = open(args.output, "w")
 
 total_bases = [0, 0, 0]
 
-for i, read in enumerate(args.reads):
+files = args.reads
+if len(args.directory):
+  files += [args.directory + "/" + x for x in os.listdir(args.directory)]  
+
+for i, read in enumerate(files):
   try:
     data = load_read_data(read)
   except Exception as e:
@@ -173,6 +180,8 @@ for i, read in enumerate(args.reads):
     continue
   if not data:  
     continue
+  print "\rcalling read %d/%d %s" % (i, len(files), read)
+  sys.stdout.flush()
   if args.output_orig:
     try:
       if "called_template" in data:
@@ -249,3 +258,5 @@ for i, read in enumerate(args.reads):
     except:
       # Don't let timing throw us out
       pass
+
+fo.close()

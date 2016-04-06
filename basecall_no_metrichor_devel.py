@@ -100,7 +100,20 @@ def load_read_data(read_file):
     stdv = e["stdv"] / tscale_sd2
     length = e["length"] / sampling_rate
     ret["temp_events2"].append(preproc_event(mean, stdv, length))
-  
+  events = h5["Analyses/Basecall_2D_000/BaseCalled_template/Events"]
+  tscale = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_template"].attrs["scale"]
+  tscale_sd = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_template"].attrs["scale_sd"]
+  tshift = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_template"].attrs["shift"]
+  tdrift = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_template"].attrs["drift"]
+  index = 0.0
+  ret["temp_events"] = []
+  for e in events:
+    mean = (e["mean"] - tshift - index * tdrift) / tscale
+    stdv = e["stdv"] / tscale_sd
+    length = e["length"]
+    ret["temp_events"].append(preproc_event(mean, stdv, length))
+    index += e["length"]
+
   events = base_events[temp_comp_loc["comp"][0]:temp_comp_loc["comp"][1]]
   cscale2, cscale_sd2, cshift2 = get_scaling_complement(events)
 
@@ -112,11 +125,50 @@ def load_read_data(read_file):
     length = e["length"] / sampling_rate
     ret["comp_events2"].append(preproc_event(mean, stdv, length))
 
+  events = h5["Analyses/Basecall_2D_000/BaseCalled_complement/Events"]
+  cscale = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_complement"].attrs["scale"]
+  cscale_sd = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_complement"].attrs["scale_sd"]
+  cshift = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_complement"].attrs["shift"]
+  cdrift = h5["/Analyses/Basecall_2D_000/Summary/basecall_1d_complement"].attrs["drift"]
+  index = 0.0
+  ret["comp_events"] = []
+  for e in events:
+    mean = (e["mean"] - cshift - index * cdrift) / cscale
+    stdv = e["stdv"] / cscale_sd
+    length = e["length"]
+    ret["comp_events"].append(preproc_event(mean, stdv, length))
+    index += e["length"]
+
   ret["temp_events2"] = np.array(ret["temp_events2"], dtype=np.float32)
   ret["comp_events2"] = np.array(ret["comp_events2"], dtype=np.float32)
+  ret["temp_events"] = np.array(ret["temp_events"], dtype=np.float32)
+  ret["comp_events"] = np.array(ret["comp_events"], dtype=np.float32)
 
   al = h5["Analyses/Basecall_2D_000/BaseCalled_2D/Alignment"]
   ret["al"] = al
+  temp_events = h5["Analyses/Basecall_2D_000/BaseCalled_template/Events"]
+  comp_events = h5["Analyses/Basecall_2D_000/BaseCalled_complement/Events"]
+  ret["2d_events"] = []
+  for a in al:
+    ev = []
+    if a[0] == -1:
+      ev += [0, 0, 0, 0, 0]
+    else:
+      e = temp_events[a[0]]
+      mean = (e["mean"] - tshift - index * tdrift) / cscale
+      stdv = e["stdv"] / tscale_sd
+      length = e["length"]
+      ev += [1] + preproc_event(mean, stdv, length)
+    if a[1] == -1:
+      ev += [0, 0, 0, 0, 0]
+    else:
+      e = comp_events[a[1]]
+      mean = (e["mean"] - cshift - index * cdrift) / cscale
+      stdv = e["stdv"] / cscale_sd
+      length = e["length"]
+      ev += [1] + preproc_event(mean, stdv, length)
+    ret["2d_events"].append(ev) 
+  ret["2d_events"] = np.array(ret["2d_events"], dtype=np.float32)
   return ret
 
 parser = argparse.ArgumentParser()
@@ -126,7 +178,7 @@ parser.add_argument('--big_net', type=str, default="nets_data/map6-2d-big.npz")
 parser.add_argument('reads', type=str, nargs='+')
 parser.add_argument('--type', type=str, default="all", help="One of: template, complement, 2d, all, use comma to separate multiple options, eg.: template,complement")
 parser.add_argument('--output', type=str, default="output.fasta")
-parser.add_argument('--output_orig', action='store_true', default=False)
+parser.add_argument('--output_orig', action='store_true', default=True)
 
 args = parser.parse_args()
 types = args.type.split(',')
@@ -154,6 +206,7 @@ if do_complement or do_2d:
 if do_2d:
   print "loading 2D net"
   big_net = RnnPredictor(args.big_net)
+  big_net_orig = RnnPredictor("nets_data/map6-2d-big.npz")
   print "done"
 
 chars = "ACGT"
@@ -181,6 +234,16 @@ for i, read in enumerate(args.reads):
     print >>fo, data["called_2d"]
 
   if do_template or do_2d:
+    o1, o2 = temp_net.predict(data["temp_events"]) 
+    o1m = (np.argmax(o1, 1))
+    o2m = (np.argmax(o2, 1))
+    print >>fo, ">%d_temp_rnn" % i
+    for a, b in zip(o1m, o2m):
+      if a < 4:
+        fo.write(chars[a])
+      if b < 4:
+        fo.write(chars[b])
+    fo.write('\n')
     o1, o2 = temp_net.predict(data["temp_events2"]) 
     o1m = (np.argmax(o1, 1))
     o2m = (np.argmax(o2, 1))
@@ -194,6 +257,16 @@ for i, read in enumerate(args.reads):
       fo.write('\n')
 
   if do_complement or do_2d:
+    o1c, o2c = comp_net.predict(data["comp_events"]) 
+    o1cm = (np.argmax(o1c, 1))
+    o2cm = (np.argmax(o2c, 1))
+    print >>fo, ">%d_comp_rnn" % i
+    for a, b in zip(o1cm, o2cm):
+      if a < 4:
+        fo.write(chars[a])
+      if b < 4:
+        fo.write(chars[b])
+    fo.write('\n')
     o1c, o2c = comp_net.predict(data["comp_events2"]) 
     o1cm = (np.argmax(o1c, 1))
     o2cm = (np.argmax(o2c, 1))
@@ -250,6 +323,16 @@ for i, read in enumerate(args.reads):
     o1c, o2c = big_net.predict(events_2d) 
     o1cm = (np.argmax(o1c, 1))
     o2cm = (np.argmax(o2c, 1))
+    print >>fo, ">%d_2d_rnn2" % i
+    for a, b in zip(o1cm, o2cm):
+      if a < 4:
+        fo.write(chars[a])
+      if b < 4:
+        fo.write(chars[b])
+    fo.write('\n')
+    o1c, o2c = big_net.predict(data["2d_events"]) 
+    o1cm = (np.argmax(o1c, 1))
+    o2cm = (np.argmax(o2c, 1))
     print >>fo, ">%d_2d_rnn" % i
     for a, b in zip(o1cm, o2cm):
       if a < 4:
@@ -277,5 +360,5 @@ for i, read in enumerate(args.reads):
     print 1. * len(events_2d) / (end_temp_ours - start_temp_ours + end_comp_ours - start_comp_ours) 
     print "Their:",
     print start_temp_th, end_temp_th, start_comp_th, end_comp_th,
-    print 1. * len(events_2d) / (end_temp_th - start_temp_th + end_comp_th - start_comp_th) 
+    print 1. * len(data["al"]) / (end_temp_th - start_temp_th + end_comp_th - start_comp_th) 
     print

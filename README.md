@@ -40,6 +40,10 @@ For SQK-MAP-006 chemistry just use:
 
 `python basecall.py <list of fast5 files>`
 
+or 
+
+`python basecall.py --directory <directory with reads>`
+
 It outputs basecalls for template, complement and 2D into file named output.fasta.
 
 For SQK-MAP-005 chemistry use:
@@ -57,6 +61,7 @@ Advanced arguments:
 - `--type template/complement/2d/all` - type of basecalling output (defaults to all)
 - `--output FILENAME` - output filename
 - `--output_orig` - if set, outputs also Metrichor basecalls
+- `--directory DIRECTORY Directory where read files are stored
 
 Usage without metrichor:
 ================
@@ -70,6 +75,7 @@ First compile alignment code:
 `python basecall_no_metrichor.py <list of fast5 files>`
 
 Arguments:
+
 - `-h` - prints help message
 - `--template_net PATH` - path to network which basecalls template (has reasonable default)
 - `--complement_net PATH` - path to network which basecalls complement (has reasonable default)

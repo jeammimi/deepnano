@@ -17,7 +17,7 @@ Prob LoadProb(int parity) {
   for (int i = 0; i < 4; i++) {
     p.p[i] = log(p.p[i]);
   }
-  p.n = log(p.n) / 2;
+  p.n = log(p.n); 
   return p;
 }
 
@@ -27,7 +27,7 @@ Prob LoadProbC(int parity) {
   for (int i = 0; i < 4; i++) {
     p.p[i] = log(p.p[i]);
   }
-  p.n = log(p.n) / 2;
+  p.n = log(p.n);
   return p;
 }
 
@@ -38,9 +38,15 @@ int main() {
   for (int i = 0; i < tc; i++) {
     temp.push_back(LoadProb(i%2));
   }
+  for (int i = 0; i < tc; i+=2) {
+    temp[i].n -= log(0.9) / 2;
+  }
   scanf("%d", &cc);
   for (int i = 0; i < cc; i++) {
     comp.push_back(LoadProbC(i%2));
+  }
+  for (int i = 0; i < cc; i+=2) {
+    comp[i].n -= log(0.9) / 2;
   }
   reverse(comp.begin(), comp.end());
   vector<vector<double>> probs(temp.size()+1, vector<double>(comp.size()+1));
@@ -56,8 +62,8 @@ int main() {
     for (int j = 0; j < probs[i].size(); j++) {
       if (i == 0 && j == 0) continue;
       probs[i][j] = minf;
-      if (i == 0 && j < 50) probs[i][j] = 0;
-      if (j == 0 && i < 50) probs[i][j] = 0;
+      if (i == 0 && (j < 2000 && j < probs[i].size() / 4)) probs[i][j] = 0;
+      if (j == 0 && (i < 2000 && i < probs.size() / 4)) probs[i][j] = 0;
       if (j > 0) {
         double np = probs[i][j-1] + comp[j-1].n;
         if (np > probs[i][j]) {
@@ -89,13 +95,15 @@ int main() {
   string seq;
   int ipos = temp.size();
   int jpos = comp.size();
-  for (int i = temp.size(); i >= temp.size() - 50 && i >= 0; i--) {
+  int margin = min(2000, (int)temp.size() / 4);
+  for (int i = temp.size(); i >= temp.size() - margin && i >= 0; i--) {
     if (probs[i][comp.size()] > probs[ipos][jpos]) {
       ipos = i;
       jpos = comp.size();
     }
   }
-  for (int j = comp.size(); j >= comp.size() - 50 && j >= 0; j--) {
+  margin = min(2000, (int)comp.size() / 4);
+  for (int j = comp.size(); j >= comp.size() - margin && j >= 0; j--) {
     if (probs[temp.size()][j] > probs[ipos][jpos]) {
       ipos = temp.size();
       jpos = j;
