@@ -8,11 +8,7 @@ import os
 import re
 import dateutil.parser
 import datetime
-
-def preproc_event(mean, std, length):
-  mean = mean / 100.0 - 0.66
-  std = std - 1
-  return [mean, mean*mean, std, length]
+from helpers import *
 
 def load_read_data(read_file):
   h5 = h5py.File(read_file, "r")
@@ -172,6 +168,7 @@ if len(args.directory):
   files += [os.path.join(args.directory, x) for x in os.listdir(args.directory)]  
 
 for i, read in enumerate(files):
+  basename = os.path.basename(read)
   try:
     data = load_read_data(read)
   except Exception as e:
@@ -180,65 +177,38 @@ for i, read in enumerate(files):
     continue
   if not data:  
     continue
-  print "\rcalling read %d/%d %s" % (i, len(files), read)
+  print "\rcalling read %d/%d %s" % (i, len(files), read),
   sys.stdout.flush()
   if args.output_orig:
     try:
       if "called_template" in data:
-        print >>fo, ">%d_template" % i
+        print >>fo, ">%s_template" % basename
         print >>fo, data["called_template"]
       if "mp_template" in data:
-        print >>fo, ">%d_mp_template" % i
+        print >>fo, ">%s_mp_template" % basename
         print >>fo, data["mp_template"]
       if "called_complement" in data:
-        print >>fo, ">%d_complement" % i
+        print >>fo, ">%s_complement" % basename
         print >>fo, data["called_complement"]
       if "called_2d" in data:
-        print >>fo, ">%d_2d" % i
+        print >>fo, ">%s_2d" % basename
         print >>fo, data["called_2d"]
     except:
       pass
 
   temp_start = datetime.datetime.now()
   if do_template and "temp_events" in data:
-    o1, o2 = temp_net.predict(data["temp_events"]) 
-    o1m = (np.argmax(o1, 1))
-    o2m = (np.argmax(o2, 1))
-    print >>fo, ">%d_temp_rnn" % i
-    for a, b in zip(o1m, o2m):
-      if a < 4:
-        fo.write(chars[a])
-      if b < 4:
-        fo.write(chars[b])
-    fo.write('\n')
+    predict_and_write(data["temp_events"], temp_net, fo, "%s_template_rnn" % basename)
   temp_time = datetime.datetime.now() - temp_start
 
   comp_start = datetime.datetime.now()
   if do_complement and "comp_events" in data:
-    o1c, o2c = comp_net.predict(data["comp_events"]) 
-    o1cm = (np.argmax(o1c, 1))
-    o2cm = (np.argmax(o2c, 1))
-    print >>fo, ">%d_comp_rnn" % i
-    for a, b in zip(o1cm, o2cm):
-      if a < 4:
-        fo.write(chars[a])
-      if b < 4:
-        fo.write(chars[b])
-    fo.write('\n')
+    predict_and_write(data["comp_events"], comp_net, fo, "%s_complement_rnn" % basename)
   comp_time = datetime.datetime.now() - comp_start
 
   start_2d = datetime.datetime.now()
   if do_2d and "2d_events" in data:
-    o1c, o2c = big_net.predict(data["2d_events"]) 
-    o1cm = (np.argmax(o1c, 1))
-    o2cm = (np.argmax(o2c, 1))
-    print >>fo, ">%d_2d_rnn" % i
-    for a, b in zip(o1cm, o2cm):
-      if a < 4:
-        fo.write(chars[a])
-      if b < 4:
-        fo.write(chars[b])
-    fo.write('\n')
+    predict_and_write(data["2d_events"], big_net, fo, "%s_2d_rnn" % basename) 
   time_2d = datetime.datetime.now() - start_2d
 
   if args.timing:
@@ -258,5 +228,5 @@ for i, read in enumerate(files):
     except:
       # Don't let timing throw us out
       pass
-
+  fo.flush()
 fo.close()
