@@ -169,7 +169,7 @@ total_bases = [0, 0, 0]
 
 files = args.reads
 if len(args.directory):
-  files += [args.directory + "/" + x for x in os.listdir(args.directory)]  
+  files += [os.path.join(args.directory, x) for x in os.listdir(args.directory)]  
 
 for i, read in enumerate(files):
   try:
