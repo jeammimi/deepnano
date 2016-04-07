@@ -61,7 +61,7 @@ Advanced arguments:
 - `--type template/complement/2d/all` - type of basecalling output (defaults to all)
 - `--output FILENAME` - output filename
 - `--output_orig` - if set, outputs also Metrichor basecalls
-- `--directory DIRECTORY Directory where read files are stored
+- `--directory DIRECTORY` Directory where read files are stored
 
 Usage without metrichor:
 ================
