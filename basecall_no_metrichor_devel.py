@@ -81,6 +81,13 @@ def load_read_data(read_file):
   temp_comp_loc = template_complement_loc(base_events)
   if not temp_comp_loc:
     return None
+
+#  print "temp_comp_loc", temp_comp_loc["temp"], temp_comp_loc["comp"]
+#  print h5["Analyses/Basecall_2D_000/Summary/split_hairpin"].attrs["start_index_temp"],
+#  print h5["Analyses/Basecall_2D_000/Summary/split_hairpin"].attrs["end_index_temp"],
+#  print h5["Analyses/Basecall_2D_000/Summary/split_hairpin"].attrs["start_index_comp"],
+#  print h5["Analyses/Basecall_2D_000/Summary/split_hairpin"].attrs["end_index_comp"]
+
   sampling_rate = h5["UniqueGlobalKey/channel_id"].attrs["sampling_rate"]
 
   try:

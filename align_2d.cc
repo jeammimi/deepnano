@@ -56,23 +56,24 @@ int main() {
   vector<vector<int>> prevs(temp.size()+1, vector<int>(comp.size()+1));
 
   double minf = -1000000000000.0;
-
+  double pen = -0.5;
   probs[0][0] = 0;
   for (int i = 0; i < probs.size(); i++) {
     for (int j = 0; j < probs[i].size(); j++) {
       if (i == 0 && j == 0) continue;
-      probs[i][j] = minf;
-      if (i == 0 && (j < 2000 && j < probs[i].size() / 4)) probs[i][j] = 0;
-      if (j == 0 && (i < 2000 && i < probs.size() / 4)) probs[i][j] = 0;
+      probs[i][j] = 0;
+//      if (i == 0 && (j < 2000 && j < probs[i].size() / 4)) probs[i][j] = 0;
+//      if (j == 0 && (i < 2000 && i < probs.size() / 4)) probs[i][j] = 0;
+      prevs[i][j] = 6;
       if (j > 0) {
-        double np = probs[i][j-1] + comp[j-1].n;
+        double np = probs[i][j-1] + comp[j-1].n - pen;
         if (np > probs[i][j]) {
           prevs[i][j] = 4;
           probs[i][j] = np;
         }
       }
       if (i > 0) {
-        double np = probs[i-1][j] + temp[i-1].n;
+        double np = probs[i-1][j] + temp[i-1].n - pen;
         if (np > probs[i][j]) {
           prevs[i][j] = 5;
           probs[i][j] = np;
@@ -80,7 +81,7 @@ int main() {
       }
       if (i > 0 && j > 0) {
         for (int k = 0; k < 4; k++) {
-          double np = probs[i-1][j-1] + (temp[i-1].p[k] + comp[j-1].p[k]);
+          double np = probs[i-1][j-1] + (temp[i-1].p[k] + comp[j-1].p[k]) - 2*pen;
           if (np > probs[i][j]) {
             prevs[i][j] = k;
             probs[i][j] = np;
@@ -89,13 +90,13 @@ int main() {
       }
     }
   }
-//  fprintf(stderr, "%lf\n", probs.back().back());
+  fprintf(stderr, "%lf\n", probs.back().back());
 
   char alph[] = "ACGT";
   string seq;
   int ipos = temp.size();
   int jpos = comp.size();
-  int margin = min(2000, (int)temp.size() / 4);
+/*  int margin = min(2000, (int)temp.size() / 4);
   for (int i = temp.size(); i >= temp.size() - margin && i >= 0; i--) {
     if (probs[i][comp.size()] > probs[ipos][jpos]) {
       ipos = i;
@@ -108,9 +109,21 @@ int main() {
       ipos = temp.size();
       jpos = j;
     }
+  }*/
+  for (int i = 0; i < temp.size(); i++) {
+    for (int j = 0; j < comp.size(); j++) {
+      if (probs[i][j] > probs[ipos][jpos]) {
+        ipos = i;
+        jpos = j;
+      }
+    }
   }
+
   vector<pair<int, int>> trace;
   while (ipos > 0 && jpos > 0) {
+    if (prevs[ipos][jpos] == 6) {
+      break;
+    }
     trace.push_back(make_pair(ipos, jpos));
     if (prevs[ipos][jpos] == 4) {
       jpos--;
@@ -123,7 +136,7 @@ int main() {
     }
   }
   reverse(trace.begin(), trace.end());
-//  fprintf(stderr, "%d\n", seq.size());
+  fprintf(stderr, "%d\n", seq.size());
   reverse(seq.begin(), seq.end());
   printf("%s\n", seq.c_str());
   

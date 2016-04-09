@@ -8,11 +8,8 @@ import os
 import re
 import dateutil.parser
 import datetime
-
-def preproc_event(mean, std, length):
-  mean = mean / 100.0 - 0.66
-  std = std - 1
-  return [mean, mean*mean, std, length]
+from helpers import *
+import subprocess
 
 def get_scaling_template(events, has_std):
   down = 48.4631279889
@@ -131,10 +128,12 @@ def load_read_data(read_file):
 parser = argparse.ArgumentParser()
 parser.add_argument('--template_net', type=str, default="nets_data/map6temp.npz")
 parser.add_argument('--complement_net', type=str, default="nets_data/map6comp.npz")
-parser.add_argument('--big_net', type=str, default="nets_data/map6-2d-no-metr.npz")
+parser.add_argument('--big_net', type=str, default="nets_data/map6-2d-no-metr10.npz")
 parser.add_argument('reads', type=str, nargs='+')
 parser.add_argument('--type', type=str, default="all", help="One of: template, complement, 2d, all, use comma to separate multiple options, eg.: template,complement")
 parser.add_argument('--output', type=str, default="output.fasta")
+parser.add_argument('--directory', type=str, default='', help="Directory where read files are stored")
+
 
 args = parser.parse_args()
 types = args.type.split(',')
@@ -150,6 +149,7 @@ if "all" in types or "2d" in types:
   do_2d = True
 
 assert do_template or do_complement or do_2d, "Nothing to do"
+assert len(args.reads) != 0 or len(args.directory) != 0, "Nothing to basecall"
 
 if do_template or do_2d:
   print "loading template net"
@@ -169,46 +169,34 @@ mapping = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}
 
 fo = open(args.output, "w")
 
-total_bases = [0, 0, 0]
+files = args.reads
+if len(args.directory):
+  files += [os.path.join(args.directory, x) for x in os.listdir(args.directory)]  
 
-for i, read in enumerate(args.reads):
-  if True:
+for i, read in enumerate(files):
+  basename = os.path.basename(read)
+  try:
     data = load_read_data(read)
-# except Exception as e:
-#   print e
-#   print "error at file", read
-#   continue
-  if not data:  
+  except Exception as e:
+    print e
+    print "error at file", read
     continue
 
   if do_template or do_2d:
-    o1, o2 = temp_net.predict(data["temp_events2"]) 
-    o1m = (np.argmax(o1, 1))
-    o2m = (np.argmax(o2, 1))
-    if do_template:
-      print >>fo, ">%d_temp_rnn2" % i
-      for a, b in zip(o1m, o2m):
-        if a < 4:
-          fo.write(chars[a])
-        if b < 4:
-          fo.write(chars[b])
-      fo.write('\n')
+    o1, o2 = predict_and_write(
+        data["temp_events2"], temp_net, 
+        fo if do_template else None,
+        "%s_template_rnn" % basename)
 
   if do_complement or do_2d:
-    o1c, o2c = comp_net.predict(data["comp_events2"]) 
-    o1cm = (np.argmax(o1c, 1))
-    o2cm = (np.argmax(o2c, 1))
-    if do_complement:
-      print >>fo, ">%d_comp_rnn2" % i
-      for a, b in zip(o1cm, o2cm):
-        if a < 4:
-          fo.write(chars[a])
-        if b < 4:
-          fo.write(chars[b])
-      fo.write('\n')
+    o1c, o2c = predict_and_write(
+        data["comp_events2"], comp_net, 
+        fo if do_complement else None,
+        "%s_complement_rnn" % basename)
 
   if do_2d:
-    f2d = open("2d.in", "w")
+    p = subprocess.Popen("./align_2d", stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    f2d = p.stdin
     print >>f2d, len(o1)+len(o2)
     for a, b in zip(o1, o2):
       print >>f2d, " ".join(map(str, a))
@@ -217,15 +205,12 @@ for i, read in enumerate(args.reads):
     for a, b in zip(o1c, o2c):
       print >>f2d, " ".join(map(str, a))
       print >>f2d, " ".join(map(str, b))
-    f2d.close()
-    os.system("./align_2d <2d.in >2d.out")
-    f2do = open("2d.out")
-    call2d = f2do.next().strip()
+    f2do, f2de = p.communicate()
+    lines = f2do.strip().split('\n')
     print >>fo, ">%d_2d_rnn_simple" % i
-    print >>fo, call2d
-
+    print >>fo, lines[0].strip()
     events_2d = []
-    for l in f2do:
+    for l in lines[1:]:
       temp_ind, comp_ind = map(int, l.strip().split())
       e = []
       if temp_ind == -1:
@@ -238,13 +223,4 @@ for i, read in enumerate(args.reads):
         e += [1] + list(data["comp_events2"][comp_ind])
       events_2d.append(e)
     events_2d = np.array(events_2d, dtype=np.float32)
-    o1c, o2c = big_net.predict(events_2d) 
-    o1cm = (np.argmax(o1c, 1))
-    o2cm = (np.argmax(o2c, 1))
-    print >>fo, ">%d_2d_rnn" % i
-    for a, b in zip(o1cm, o2cm):
-      if a < 4:
-        fo.write(chars[a])
-      if b < 4:
-        fo.write(chars[b])
-    fo.write('\n')
+    predict_and_write(events_2d, big_net, fo, "%s_2d_rnn" % i)

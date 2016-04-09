@@ -82,4 +82,4 @@ Arguments:
 - `--big_net PATH` - path to network which basecalls 2D (has reasonable default)
 - `--type template/complement/2d/all` - type of basecalling output (defaults to all)
 - `--output FILENAME` - output filename
-
+- `--directory DIRECTORY` Directory where read files are stored
