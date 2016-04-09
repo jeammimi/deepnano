@@ -10,6 +10,7 @@ import dateutil.parser
 import datetime
 from helpers import *
 import subprocess
+import time
 
 def get_scaling_template(events, has_std):
   down = 48.4631279889
@@ -83,11 +84,12 @@ def load_read_data(read_file):
   read_key = h5["Analyses/EventDetection_000/Reads"].keys()[0]
   base_events = h5["Analyses/EventDetection_000/Reads"][read_key]["Events"]
   temp_comp_loc = template_complement_loc(base_events)
-  if not temp_comp_loc:
-    return None
   sampling_rate = h5["UniqueGlobalKey/channel_id"].attrs["sampling_rate"]
 
-  events = base_events[temp_comp_loc["temp"][0]:temp_comp_loc["temp"][1]]
+  if temp_comp_loc:
+    events = base_events[temp_comp_loc["temp"][0]:temp_comp_loc["temp"][1]]
+  else:
+    events = base_events    
   has_std = True
   try:
     std = events[0]["stdv"]
@@ -105,6 +107,11 @@ def load_read_data(read_file):
       stdv = np.sqrt(e["variance"]) / tscale_sd2
     length = e["length"] / sampling_rate
     ret["temp_events2"].append(preproc_event(mean, stdv, length))
+
+  ret["temp_events2"] = np.array(ret["temp_events2"], dtype=np.float32)
+
+  if not temp_comp_loc:
+    return ret
   
   events = base_events[temp_comp_loc["comp"][0]:temp_comp_loc["comp"][1]]
   cscale2, cscale_sd2, cshift2 = get_scaling_complement(events, has_std)
@@ -120,67 +127,18 @@ def load_read_data(read_file):
     length = e["length"] / sampling_rate
     ret["comp_events2"].append(preproc_event(mean, stdv, length))
 
-  ret["temp_events2"] = np.array(ret["temp_events2"], dtype=np.float32)
   ret["comp_events2"] = np.array(ret["comp_events2"], dtype=np.float32)
 
   return ret
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--template_net', type=str, default="nets_data/map6temp.npz")
-parser.add_argument('--complement_net', type=str, default="nets_data/map6comp.npz")
-parser.add_argument('--big_net', type=str, default="nets_data/map6-2d-no-metr10.npz")
-parser.add_argument('reads', type=str, nargs='+')
-parser.add_argument('--type', type=str, default="all", help="One of: template, complement, 2d, all, use comma to separate multiple options, eg.: template,complement")
-parser.add_argument('--output', type=str, default="output.fasta")
-parser.add_argument('--directory', type=str, default='', help="Directory where read files are stored")
-
-
-args = parser.parse_args()
-types = args.type.split(',')
-do_template = False
-do_complement = False
-do_2d = False
-
-if "all" in types or "template" in types:
-  do_template = True
-if "all" in types or "complement" in types:
-  do_complement = True
-if "all" in types or "2d" in types:
-  do_2d = True
-
-assert do_template or do_complement or do_2d, "Nothing to do"
-assert len(args.reads) != 0 or len(args.directory) != 0, "Nothing to basecall"
-
-if do_template or do_2d:
-  print "loading template net"
-  temp_net = RnnPredictor(args.template_net)
-  print "done"
-if do_complement or do_2d:
-  print "loading complement net"
-  comp_net = RnnPredictor(args.complement_net)
-  print "done"
-if do_2d:
-  print "loading 2D net"
-  big_net = RnnPredictor(args.big_net)
-  print "done"
-
-chars = "ACGT"
-mapping = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}
-
-fo = open(args.output, "w")
-
-files = args.reads
-if len(args.directory):
-  files += [os.path.join(args.directory, x) for x in os.listdir(args.directory)]  
-
-for i, read in enumerate(files):
-  basename = os.path.basename(read)
+def basecall(read_file_name, fo):
+  basename = os.path.basename(read_file_name)
   try:
-    data = load_read_data(read)
+    data = load_read_data(read_file_name)
   except Exception as e:
     print e
-    print "error at file", read
-    continue
+    print "error at file", read_file_name
+    return
 
   if do_template or do_2d:
     o1, o2 = predict_and_write(
@@ -188,13 +146,13 @@ for i, read in enumerate(files):
         fo if do_template else None,
         "%s_template_rnn" % basename)
 
-  if do_complement or do_2d:
+  if (do_complement or do_2d) and "comp_events2" in data:
     o1c, o2c = predict_and_write(
         data["comp_events2"], comp_net, 
         fo if do_complement else None,
         "%s_complement_rnn" % basename)
 
-  if do_2d:
+  if do_2d and "comp_events2" in data:
     p = subprocess.Popen("./align_2d", stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     f2d = p.stdin
     print >>f2d, len(o1)+len(o2)
@@ -224,3 +182,90 @@ for i, read in enumerate(files):
       events_2d.append(e)
     events_2d = np.array(events_2d, dtype=np.float32)
     predict_and_write(events_2d, big_net, fo, "%s_2d_rnn" % basename)
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--template_net', type=str, default="nets_data/map6temp.npz")
+parser.add_argument('--complement_net', type=str, default="nets_data/map6comp.npz")
+parser.add_argument('--big_net', type=str, default="nets_data/map6-2d-no-metr10.npz")
+parser.add_argument('reads', type=str, nargs='*')
+parser.add_argument('--type', type=str, default="all", help="One of: template, complement, 2d, all, use comma to separate multiple options, eg.: template,complement")
+parser.add_argument('--output', type=str, default="output.fasta")
+parser.add_argument('--directory', type=str, default='', help="Directory where read files are stored")
+parser.add_argument('--watch', type=str, default='', help='Watched directory')
+
+
+args = parser.parse_args()
+types = args.type.split(',')
+do_template = False
+do_complement = False
+do_2d = False
+
+if "all" in types or "template" in types:
+  do_template = True
+if "all" in types or "complement" in types:
+  do_complement = True
+if "all" in types or "2d" in types:
+  do_2d = True
+
+assert do_template or do_complement or do_2d, "Nothing to do"
+assert len(args.reads) != 0 or len(args.directory) != 0 or len(args.watch) != 0, "Nothing to basecall"
+
+if do_template or do_2d:
+  print "loading template net"
+  temp_net = RnnPredictor(args.template_net)
+  print "done"
+if do_complement or do_2d:
+  print "loading complement net"
+  comp_net = RnnPredictor(args.complement_net)
+  print "done"
+if do_2d:
+  print "loading 2D net"
+  big_net = RnnPredictor(args.big_net)
+  print "done"
+
+chars = "ACGT"
+mapping = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}
+
+if len(args.reads) or len(args.directory) != 0:
+  fo = open(args.output, "w")
+
+  files = args.reads
+  if len(args.directory):
+    files += [os.path.join(args.directory, x) for x in os.listdir(args.directory)]  
+
+  for i, read in enumerate(files):
+    basecall(read, fo)
+
+  fo.close()
+
+if len(args.watch) != 0:
+  try:
+    from watchdog.observers import Observer
+    from watchdog.events import PatternMatchingEventHandler
+  except:
+    print "Please install watchdog to watch directories"
+    sys.exit()
+
+  class Fast5Handler(PatternMatchingEventHandler):
+    """Class for handling creation fo fast5-files"""
+    patterns = ["*.fast5"]
+    def on_created(self, event):
+      print "Calling", event
+      file_name = str(os.path.basename(event.src_path))
+      fasta_file_name = os.path.splitext(event.src_path)[0] + '.fasta'
+      with open(fasta_file_name, "w") as fo:
+        basecall(event.src_path, fo)
+  print('Watch dir: ' + args.watch)
+  observer = Observer()
+  print('Starting Observerer')
+  # start watching directory for fast5-files
+  observer.start()
+  observer.schedule(Fast5Handler(), path=args.watch)
+  try:
+    while True:
+      time.sleep(1)
+  # quit script using ctrl+c
+  except KeyboardInterrupt:
+    observer.stop()
+
+  observer.join()

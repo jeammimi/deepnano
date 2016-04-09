@@ -66,11 +66,19 @@ Advanced arguments:
 Usage without metrichor:
 ================
 
-Warning: Use at your own risk. The code is in heavy development
-and was not properly tested yet.
+Basecaller above used spliting to template and
+complement, scaling parameters and alignment from metrichor.
 
-First compile alignment code:
+The tools below does not require metrichor at some expense at accuracy.
+Currently the accuracy for 1D basecall is almost similar as for the tools above
+(except for some reads where we really mess up scaling).
+The accuracy for 2D basecall is approximatelly 2% lower than for metrichor (whereas
+the tool above was 2% better than metrichor). 
+
+To use this tool, first compile alignment code:
 `g++ -O2 -std=gnu++0x align_2d.cc -o align_2d`
+
+Then run:
 
 `python basecall_no_metrichor.py <list of fast5 files>`
 
@@ -83,3 +91,12 @@ Arguments:
 - `--type template/complement/2d/all` - type of basecalling output (defaults to all)
 - `--output FILENAME` - output filename
 - `--directory DIRECTORY` Directory where read files are stored
+
+If you want to watch a directory for new files, first install:
+
+- watchdog==0.8.3
+
+And then use (the output parameter has no effect, we output separate fasta files for each fast5 file):
+
+`python basecall_no_metrichor.py --watch <directory name>`
+
