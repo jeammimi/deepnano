@@ -207,7 +207,7 @@ for i, read in enumerate(files):
       print >>f2d, " ".join(map(str, b))
     f2do, f2de = p.communicate()
     lines = f2do.strip().split('\n')
-    print >>fo, ">%d_2d_rnn_simple" % i
+    print >>fo, ">%s_2d_rnn_simple" % basename
     print >>fo, lines[0].strip()
     events_2d = []
     for l in lines[1:]:
@@ -223,4 +223,4 @@ for i, read in enumerate(files):
         e += [1] + list(data["comp_events2"][comp_ind])
       events_2d.append(e)
     events_2d = np.array(events_2d, dtype=np.float32)
-    predict_and_write(events_2d, big_net, fo, "%s_2d_rnn" % i)
+    predict_and_write(events_2d, big_net, fo, "%s_2d_rnn" % basename)
