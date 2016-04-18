@@ -186,7 +186,7 @@ def basecall(read_file_name, fo):
 parser = argparse.ArgumentParser()
 parser.add_argument('--template_net', type=str, default="nets_data/map6temp.npz")
 parser.add_argument('--complement_net', type=str, default="nets_data/map6comp.npz")
-parser.add_argument('--big_net', type=str, default="nets_data/map6-2d-no-metr10.npz")
+parser.add_argument('--big_net', type=str, default="nets_data/map6-2d-no-metr20.npz")
 parser.add_argument('reads', type=str, nargs='*')
 parser.add_argument('--type', type=str, default="all", help="One of: template, complement, 2d, all, use comma to separate multiple options, eg.: template,complement")
 parser.add_argument('--output', type=str, default="output.fasta")
