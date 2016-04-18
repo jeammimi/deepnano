@@ -72,7 +72,7 @@ complement, scaling parameters and alignment from metrichor.
 The tools below does not require metrichor at some expense at accuracy.
 Currently the accuracy for 1D basecall is almost similar as for the tools above
 (except for some reads where we really mess up scaling).
-The accuracy for 2D basecall is approximatelly 2% lower than for metrichor (whereas
+The accuracy for 2D basecall is approximatelly 0.5% lower than for metrichor (whereas
 the tool above was 2% better than metrichor). 
 
 To use this tool, first compile alignment code:
