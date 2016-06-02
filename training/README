@@ -1,0 +1,28 @@
+Preparing training files
+=========================
+
+`python prepare_dataset <type> <list_of_files_and_references> <output_directory>`
+
+Where:
+Type is one of temp/comp/2d.
+List_of_files_and_references is a file which contains names of read files followed
+by reference sequence (one pair on each line), e.g.:
+
+file1.fast5 ACCGGGTTAACCC
+file2.fast5 CCCGGTTAAACCCGGGG
+file3.fast5 AAATTGGCCTTGGAAA
+
+The reference sequence should cover whole read sequence and maybe overextend a bit
+(like 20 bases on each side).
+
+Output directory must exist before calling the script.
+
+Training
+===============
+
+`OMP_NUM_THREADS=1 python train.py <starting network> <list_of_training_files>`
+
+Use starting network from ../nets_data/ (map6temp/map6comp/map6-2d-big)
+
+Then this creates a directory a starts training. Each 20th iteration it outputs network into that
+directory with name dump-%s.npz (where %s is ID of iteration).
