@@ -24,3 +24,4 @@ Advanced arguments:
 - `--output FILENAME` - output filename
 - `--directory DIRECTORY` Directory where read files are stored
 
+Basecaller will perform event extraction, if events are not present.
