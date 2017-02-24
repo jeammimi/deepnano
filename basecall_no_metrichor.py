@@ -152,7 +152,7 @@ def basecall(read_file_name, fo):
         fo if do_complement else None,
         "%s_complement_rnn" % basename)
 
-  if do_2d and "comp_events2" in data:
+  if do_2d and "comp_events2" in data and len(data["comp_events2"]) < 10000:
     p = subprocess.Popen("./align_2d", stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     f2d = p.stdin
     print >>f2d, len(o1)+len(o2)
@@ -181,7 +181,8 @@ def basecall(read_file_name, fo):
         e += [1] + list(data["comp_events2"][comp_ind])
       events_2d.append(e)
     events_2d = np.array(events_2d, dtype=np.float32)
-    predict_and_write(events_2d, big_net, fo, "%s_2d_rnn" % basename)
+    if len(events_2d) >= 5:
+      predict_and_write(events_2d, big_net, fo, "%s_2d_rnn" % basename)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--template_net', type=str, default="nets_data/map6temp.npz")
