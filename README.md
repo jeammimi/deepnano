@@ -38,17 +38,17 @@ Basic usage:
 
 For SQK-MAP-006 chemistry just use:
 
-`python basecall.py <list of fast5 files>`
+`OMP_NUM_THREADS=1 python basecall.py <list of fast5 files>`
 
 or 
 
-`python basecall.py --directory <directory with reads>`
+`OMP_NUM_THREADS=1 python basecall.py --directory <directory with reads>`
 
 It outputs basecalls for template, complement and 2D into file named output.fasta.
 
 For SQK-MAP-005 chemistry use:
 
-`python basecall.py --template_net nets_data/map5temp.npz --complement_net nets_data/map5comp.npz --big_net nets_data/map5-2d.npz <list of fast5 files>`
+`OMP_NUM_THREADS=1 python basecall.py --template_net nets_data/map5temp.npz --complement_net nets_data/map5comp.npz --big_net nets_data/map5-2d.npz <list of fast5 files>`
 
 For R9 and R9.4 check r9 directory.
 
@@ -82,7 +82,7 @@ To use this tool, first compile alignment code:
 
 Then run:
 
-`python basecall_no_metrichor.py <list of fast5 files>`
+`OMP_NUM_THREADS=1 python basecall_no_metrichor.py <list of fast5 files>`
 
 Arguments:
 
@@ -100,5 +100,5 @@ If you want to watch a directory for new files, first install:
 
 And then use (the output parameter has no effect, we output separate fasta files for each fast5 file):
 
-`python basecall_no_metrichor.py --watch <directory name>`
+`OMP_NUM_THREADS=1 python basecall_no_metrichor.py --watch <directory name>`
 

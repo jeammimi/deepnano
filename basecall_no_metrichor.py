@@ -152,7 +152,9 @@ def basecall(read_file_name, fo):
         fo if do_complement else None,
         "%s_complement_rnn" % basename)
 
-  if do_2d and "comp_events2" in data and len(data["comp_events2"]) < 10000:
+  if do_2d and "comp_events2" in data and\
+     len(data["comp_events2"]) <= args.max_2d_length and\
+     len(data["temp_events2"]) <= args.max_2d_length:
     p = subprocess.Popen("./align_2d", stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     f2d = p.stdin
     print >>f2d, len(o1)+len(o2)
@@ -164,6 +166,8 @@ def basecall(read_file_name, fo):
       print >>f2d, " ".join(map(str, a))
       print >>f2d, " ".join(map(str, b))
     f2do, f2de = p.communicate()
+    if p.returncode != 0:
+      return
     lines = f2do.strip().split('\n')
     print >>fo, ">%s_2d_rnn_simple" % basename
     print >>fo, lines[0].strip()
@@ -188,6 +192,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--template_net', type=str, default="nets_data/map6temp.npz")
 parser.add_argument('--complement_net', type=str, default="nets_data/map6comp.npz")
 parser.add_argument('--big_net', type=str, default="nets_data/map6-2d-no-metr23.npz")
+parser.add_argument('--max_2d_length', type=int, default=10000, help='Max length for 2d basecall')
 parser.add_argument('reads', type=str, nargs='*')
 parser.add_argument('--type', type=str, default="all", help="One of: template, complement, 2d, all, use comma to separate multiple options, eg.: template,complement")
 parser.add_argument('--output', type=str, default="output.fasta")
