@@ -69,15 +69,16 @@ def get_tstat(s, s2, wl):
    
 
 def extract_events(h5, chem):
+  print "ed"
   raw, sl = get_raw(h5)
 
-  med, mad = med_mad(ed['mean'][-100:])
+  events = event_detect(raw, sl, **defs[chem]["ed_params"])
+  med, mad = med_mad(events['mean'][-100:])
   max_thresh = med + 1.48 * 2 + mad
 
-  first_event = find_stall(ed, max_thresh)
+  first_event = find_stall(events, max_thresh)
 
-  events = event_detect(raw, sl, **defs[chem]["ed_params"])
-  return events
+  return events[first_event:]
 
 def med_mad(data):
   dmed = np.median(data)

@@ -4,6 +4,7 @@ import argparse
 import os
 import datetime
 import numpy as np
+from extract_events import extract_events
 
 def scale(X):
   m25 = np.percentile(X[:,0], 25)
@@ -25,49 +26,54 @@ def scale(X):
   return ret
 
 def get_events(h5):
-  try:
-    e = h5["Analyses/Basecall_RNN_1D_000/BaseCalled_template/Events"]
-    return e
-  except:
-    pass
-  try:
-    e = h5["Analyses/Basecall_1D_000/BaseCalled_template/Events"]
-    return e
-  except:
-    pass
+  if not args.event_detect:
+    try:
+      e = h5["Analyses/Basecall_RNN_1D_000/BaseCalled_template/Events"]
+      return e
+    except:
+      pass
+    try:
+      e = h5["Analyses/Basecall_1D_000/BaseCalled_template/Events"]
+      return e
+    except:
+      pass
 
-  return None
+  return extract_events(h5, args.chemistry)
 
 def basecall(filename, output_file):
-  h5 = h5py.File(filename, "r")
-  events = get_events(h5)
-  if events is None:
-    print "No events in file %s" % filename
+  try:
+    h5 = h5py.File(filename, "r")
+    events = get_events(h5)
+    if events is None:
+      print "No events in file %s" % filename
+      h5.close()
+      return 0
+
+    if len(events) < 300:
+      print "Read %s too short, not basecalling" % filename
+      h5.close()
+      return 0
+
+    events = events[50:-50]
+    mean = events["mean"]
+    std = events["stdv"]
+    length = events["length"]
+    X = scale(np.array(np.vstack([mean, mean*mean, std, length]).T, dtype=np.float32))
+
+    o1, o2 = ntwk.predict(X)
+    o1m = (np.argmax(o1, 1))
+    o2m = (np.argmax(o2, 1))
+    om = np.vstack((o1m,o2m)).reshape((-1,),order='F')
+    output = "".join(map(lambda x: alph[x], om)).replace("N", "")
+    print >>output_file, ">%s_template_deepnano" % filename
+    print >>output_file, output
+    output_file.flush()
+
     h5.close()
+    return len(events)
+  except Exception as e:
+    print "Read %s failed with %s" % (filename, e)
     return 0
-
-  if len(events) < 300:
-    print "Read %s too short, not basecalling" % filename
-    h5.close()
-    return 0
-
-  events = events[50:-50]
-  mean = events["mean"]
-  std = events["stdv"]
-  length = events["length"]
-  X = scale(np.array(np.vstack([mean, mean*mean, std, length]).T, dtype=np.float32))
-
-  o1, o2 = ntwk.predict(X)
-  o1m = (np.argmax(o1, 1))
-  o2m = (np.argmax(o2, 1))
-  om = np.vstack((o1m,o2m)).reshape((-1,),order='F')
-  output = "".join(map(lambda x: alph[x], om)).replace("N", "")
-  print >>output_file, ">%s_template_deepname" % filename
-  print >>output_file, output
-  output_file.flush()
-
-  h5.close()
-  return len(events)
 
 alph = "ACGTN"
 
@@ -79,7 +85,9 @@ parser.add_argument('--watch', type=str, default='', help='Watched directory')
 parser.add_argument('reads', type=str, nargs='*')
 parser.add_argument('--debug', dest='debug', action='store_true')
 parser.add_argument('--no-debug', dest='debug', action='store_false')
+parser.add_argument('--event-detect', dest='event_detect', action='store_true')
 parser.set_defaults(debug=False)
+parser.set_defaults(event_detect=False)
 
 args = parser.parse_args()
 
@@ -103,7 +111,7 @@ if len(args.reads) or len(args.directory) != 0:
     current_events = basecall(read, fo)
     if args.debug:
       total_events += current_events
-      time_diff = (datetime.datetime.now() - start_time).seconds
+      time_diff = (datetime.datetime.now() - start_time).seconds + 0.000001
       print "Basecalled %d events in %f (%f ev/s)" % (total_events, time_diff, total_events / time_diff)
 
   fo.close()
