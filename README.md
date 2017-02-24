@@ -50,6 +50,8 @@ For SQK-MAP-005 chemistry use:
 
 `python basecall.py --template_net nets_data/map5temp.npz --complement_net nets_data/map5comp.npz --big_net nets_data/map5-2d.npz <list of fast5 files>`
 
+For R9 and R9.4 check r9 directory.
+
 Advanced arguments:
 =================
 
