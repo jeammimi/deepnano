@@ -63,14 +63,16 @@ int main() {
   mapping['C'] = 1;
   mapping['G'] = 2;
   mapping['T'] = 3;
+  mapping['B'] = 4; //Modif
+  int unknown = 5;
   int range = 4000;
   vector<vector<double>> probs;
   while (true) {
-    double a, c, g, t, n;
-    if (scanf("%lf %lf %lf %lf %lf", &a, &c, &g, &t, &n)<5) {
+    double a, c, g, t, b, n;
+    if (scanf("%lf %lf %lf %lf %lf %lf", &a, &c, &g, &t, &b, &n)<6) { //Modif
       break;
     }
-    probs.push_back(vector<double>({log(a), log(c), log(g), log(t), log(n)}));
+    probs.push_back(vector<double>({log(a), log(c), log(g), log(t), log(b), log(n)})); // Modif
   }
   while (true) {
     vector<vector<double>> poses(probs.size()+1);
@@ -88,14 +90,14 @@ int main() {
       for (int j = max(1, last_bp - range); j <= ref.size() && j <= last_bp + range; j++) {
         // NN
         if (i > 2) {
-          double np = poses[i-2][j] + probs[i-2][4] + probs[i-1][4];
+          double np = poses[i-2][j] + probs[i-2][unknown] + probs[i-1][unknown];
           if (np > poses[i][j]) {
             poses[i][j] = np;
             prevs[i][j] = "NN";
           }
         }
         // NX
-        double np = poses[i-2][j-1] + probs[i-2][4] + probs[i-1][mapping[ref[j-1]]];
+        double np = poses[i-2][j-1] + probs[i-2][unknown] + probs[i-1][mapping[ref[j-1]]];
         if (np > poses[i][j]) {
           poses[i][j] = np;
           prevs[i][j] = string("N") + ref[j-1];

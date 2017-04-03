@@ -8,6 +8,11 @@ import os
 from sklearn.metrics import confusion_matrix
 import theano as th
 from multiprocessing import Pool
+import glob
+
+
+
+
 
 def print_stats(o):
   stats = defaultdict(int)
@@ -19,11 +24,10 @@ def flatten2(x):
   return x.reshape((x.shape[0] * x.shape[1], -1))
 
 def realign(s):
-  ps = s 
-  o1, o2 = ntwk.tester(data_x[ps]) 
+  ps = s
+  o1, o2 = ntwk.tester(data_x[ps])
   o1m = (np.argmax(o1, 1))
   o2m = (np.argmax(o2, 1))
-  alph = "ACGTN"
   f = open(base_dir+"tmpb-%s.in" % s, "w")
   print >>f, refs[ps]
   for a, b in zip(o1, o2):
@@ -32,9 +36,14 @@ def realign(s):
   f.close()
 
   print "s", s
-  if os.system("./realign <%stmpb-%s.in >%stmpb-%s.out" % (base_dir, s, base_dir, s)) != 0:
-    print "watwat", s
-    sys.exit()
+  if n_classes == 6:
+      if os.system("./realign_five <%stmpb-%s.in >%stmpb-%s.out" % (base_dir, s, base_dir, s)) != 0:
+        print "watwat", s
+        sys.exit()
+  elif n_classes == 5:
+     if os.system("./realign_four <%stmpb-%s.in >%stmpb-%s.out" % (base_dir, s, base_dir, s)) != 0:
+       print "watwat", s
+       sys.exit()
 
   f = open(base_dir+"tmpb-%s.out" % s)
   for i, l in enumerate(f):
@@ -44,11 +53,7 @@ def realign(s):
   return data_y[ps], data_y2[ps]
 
 if __name__ == '__main__':
-  chars = "ACGT"
-  mapping = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}
 
-  n_dims = 4
-  n_classes = 5
 
   data_x = []
   data_y = []
@@ -56,7 +61,19 @@ if __name__ == '__main__':
   refs = []
   names = []
 
-  for fn in sys.argv[2:]:
+  if sys.argv[2] == "4":
+      mapping = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4} #Modif
+  elif sys.argv[2] == "5":
+      mapping = {"A": 0, "C": 1, "G": 2, "T": 3, "B" : 4, "N": 5} #Modif
+  else:
+      print("Unkwon mapping length")
+      exit()
+
+  n_classes = len(mapping.keys())
+
+  list_files = glob.glob(sys.argv[3] + "/*")
+  for fn in list_files:
+    print(fn)
     f = open(fn)
     ref = f.readline()
     if len(ref) > 30000:
@@ -78,8 +95,9 @@ if __name__ == '__main__':
 
   print ("done", sum(len(x) for x in refs))
   sys.stdout.flush()
-
-  ntwk = Rnn(sys.argv[1])
+  #print(len(refs[0]),len(data_x[0]),len(data_y[0]))
+  #exit()
+  ntwk = Rnn(sys.argv[1], n_classes=n_classes)
 
   print ("net rdy")
 
@@ -104,9 +122,10 @@ if __name__ == '__main__':
   print len(data_x), batch_size, n_batches, datetime.datetime.now()
 
   for epoch in range(1000):
+    print("Epoch",epoch)
     if (epoch % 20 == 0 and epoch > 0) or (epoch == 0):
       p = Pool(8)
-      new_labels = p.map(realign, range(len(data_x))) 
+      new_labels = p.map(realign, range(len(data_x)))
       for i in range(len(new_labels)):
         data_y[i] = new_labels[i][0]
         data_y2[i] = new_labels[i][1]
@@ -133,9 +152,16 @@ if __name__ == '__main__':
   #      lr = 2e-1
   #    if epoch >= 50:
   #      lr = 2e-1
+      #print(x.shape,y.shape,y2.shape)
       if epoch >= 970:
         lr = 1e-3
-      cost, o1, o2 = ntwk.trainer(x, y, y2, lr)
+      if epoch < 100:
+          cost, o1, o2 = ntwk.trainer_reduced(x, y, y2, np.array(lr,dtype=np.float32))
+      else:
+          lr = 5e-3
+          cost, o1, o2 = ntwk.trainer(x, y, y2, np.array(lr,dtype=np.float32))
+
+
       tc += cost
 
       o1m = (np.argmax(o1, 1))
@@ -158,9 +184,9 @@ if __name__ == '__main__':
     print_stats(o2mm)
     print confusion_matrix(y1mm, o1mm)
     print confusion_matrix(y2mm, o2mm)
+
   #  print "out", np.min(out_gc), np.median(out_gc), np.max(out_gc), len(out_gc)
     sys.stdout.flush()
 
     if epoch % 20 == 2:
       ntwk.save(base_dir+"dumpx-%d.npz" % epoch)
-

@@ -1,7 +1,7 @@
 Preparing training files
 =========================
 
-`python prepare_dataset <type> <list_of_files_and_references> <output_directory>`
+`python prepare_dataset <type> <list_of_files_and_references> <root_of_training_file> <output_directory>`
 
 Where:
 Type is one of temp/comp/2d.
@@ -20,7 +20,9 @@ Output directory must exist before calling the script.
 Training
 ===============
 
-`OMP_NUM_THREADS=1 python train.py <starting network> <list_of_training_files>`
+`OMP_NUM_THREADS=1 python train.py <starting network> <n_bases> <directory_with_files>`
+ex:
+python train.py ../r9/networks/r9.pkl 5 ../Test2/InTraining
 
 Use starting network from ../nets_data/ (map6temp/map6comp/map6-2d-big)
 
