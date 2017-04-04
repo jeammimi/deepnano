@@ -18,19 +18,19 @@ class SimpleLayer:
   def __init__(self):
     self.n_params = 10
     self.params = [None for i in range(10)]
-  
+
   def calc(self, input):
     state = self.params[9]
 #    output = []
     output = np.zeros((len(input), self.params[2].shape[0]), dtype=np.float32)
     for i in range(len(input)):
-      update_gate = sigmoid(np.dot(state, self.params[6]) + 
+      update_gate = sigmoid(np.dot(state, self.params[6]) +
                             np.dot(input[i], self.params[4]) +
                             self.params[8])
-      reset_gate = sigmoid(np.dot(state, self.params[5]) + 
+      reset_gate = sigmoid(np.dot(state, self.params[5]) +
                            np.dot(input[i], self.params[3]) +
                            self.params[7])
-      new_val = np.tanh(np.dot(input[i], self.params[0]) + 
+      new_val = np.tanh(np.dot(input[i], self.params[0]) +
                         reset_gate * np.dot(state, self.params[1]) +
                         self.params[2])
       state = update_gate * state + (1 - update_gate) * new_val
@@ -63,25 +63,50 @@ class Rnn:
     return l1, l2, l3
 
   def load(self, fn):
-    with open(fn, "rb") as f:
-      self.layer1 = BiSimpleLayer()
-      for i in range(10):
-        self.layer1.fwd.params[i] = pickle.load(f)
-      for i in range(10):
-        self.layer1.bwd.params[i] = pickle.load(f)
-      self.layer2 = BiSimpleLayer()
-      for i in range(10):
-        self.layer2.fwd.params[i] = pickle.load(f)
-      for i in range(10):
-        self.layer2.bwd.params[i] = pickle.load(f)
-      self.layer3 = BiSimpleLayer()
-      for i in range(10):
-        self.layer3.fwd.params[i] = pickle.load(f)
-      for i in range(10):
-        self.layer3.bwd.params[i] = pickle.load(f)
-      self.output1 = OutLayer()
-      self.output2 = OutLayer()
-      for i in range(2):
-        self.output1.params[i] = pickle.load(f)
-      for i in range(2):
-        self.output2.params[i] = pickle.load(f)
+
+    if "pkl" in fn:
+        with open(fn, "rb") as f:
+          self.layer1 = BiSimpleLayer()
+          for i in range(10):
+            self.layer1.fwd.params[i] = pickle.load(f)
+          for i in range(10):
+            self.layer1.bwd.params[i] = pickle.load(f)
+          self.layer2 = BiSimpleLayer()
+          for i in range(10):
+            self.layer2.fwd.params[i] = pickle.load(f)
+          for i in range(10):
+            self.layer2.bwd.params[i] = pickle.load(f)
+          self.layer3 = BiSimpleLayer()
+          for i in range(10):
+            self.layer3.fwd.params[i] = pickle.load(f)
+          for i in range(10):
+            self.layer3.bwd.params[i] = pickle.load(f)
+          self.output1 = OutLayer()
+          self.output2 = OutLayer()
+          for i in range(2):
+            self.output1.params[i] = pickle.load(f)
+          for i in range(2):
+            self.output2.params[i] = pickle.load(f)
+    else:
+
+        with open(fn, "rb") as f:
+            package = np.load(f)
+            print(package.keys(),len(package.keys()))
+            #print(arr.keys())
+            #for i in range(3 * 20 + 4):
+            #    package['arr_%d' % i] = np.array(pickle.load(f), dtype=np.float32)
+            n_layers = 3
+            par = 0
+            for layer in range(1, n_layers + 1):
+                setattr(self, "layer%i" % layer, BiSimpleLayer())
+                for i in range(10):
+                    getattr(self, "layer%i" % layer).fwd.params[i] = package['arr_%d' % par]
+                    par += 1
+                for i in range(10):
+                    getattr(self, "layer%i" % layer).bwd.params[i] = package['arr_%d' % par]
+                    par += 1
+            for out in range(1,3):
+                setattr(self, "output%i" % out, OutLayer())
+                for i in range(2):
+                    getattr(self, "output%i" % out).params[i] = package['arr_%d' % par]
+                    par += 1

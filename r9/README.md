@@ -16,6 +16,8 @@ Basic usage:
 ================
 
 `python basecall.py --chemistry <r9/r9.4> <list of fast5 files>`
+`python basecall.py --weights <weight_file> --Nbases <4_or_5>  <list of fast5 files>`
+
 
 Advanced arguments:
 =================

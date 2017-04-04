@@ -94,7 +94,15 @@ class Rnn:
            package['arr_%d' % par_index].shape[0] == n_classes:
           out_layer1.params[i].set_value(package['arr_%d' % par_index])
         else:
-          print("starting with empty outlayer1")
+            if n_classes == 6:
+                if len(package['arr_%d' % par_index].shape) == 2:
+                    w = np.concatenate((package['arr_%d' % par_index],package['arr_%d' % par_index][::,-1:]),axis=1)
+                    out_layer1.params[i].set_value(w)
+                else:
+                    b = np.concatenate((package['arr_%d' % par_index],package['arr_%d' % par_index][-1:]),axis=0)
+                    out_layer1.params[i].set_value(b)
+            else:
+                print("starting with empty outlayer1")
         par_index += 1
 
     out_layer2 = OutLayer(last_output, last_size, n_classes)
@@ -103,7 +111,15 @@ class Rnn:
          package['arr_%d' % par_index].shape[0] == n_classes:
         out_layer2.params[i].set_value(package['arr_%d' % par_index])
       else:
-        print("starting with empty outlayer2")
+        if n_classes == 6:
+            if len(package['arr_%d' % par_index].shape) == 2:
+                w = np.concatenate((package['arr_%d' % par_index],package['arr_%d' % par_index][::,-1:]),axis=1)
+                out_layer2.params[i].set_value(w)
+            else:
+                b = np.concatenate((package['arr_%d' % par_index],package['arr_%d' % par_index][-1:]),axis=0)
+                out_layer2.params[i].set_value(b)
+        else:
+            print("starting with empty outlayer1")
 
       par_index += 1
     output1 = out_layer1.output
@@ -134,5 +150,5 @@ class Rnn:
                                  learning_rate=self.lr, mu=0.8))
 
   def save(self, fn):
-    pp = [p.get_value() for p in self.params]
+    pp = [p.get_value() for p in self.params + self.out_params]
     np.savez(fn, *pp)

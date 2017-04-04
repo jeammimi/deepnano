@@ -19,7 +19,7 @@ def scale(X):
   shift = me25 - m25
   ret[:,0] = X[:,0] * scale + shift
   ret[:,1] = ret[:,0]**2
-  
+
   sscale = se50 / s50
 
   ret[:,2] = X[:,2] * sscale
@@ -75,10 +75,12 @@ def basecall(filename, output_file):
     print "Read %s failed with %s" % (filename, e)
     return 0
 
-alph = "ACGTN"
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--chemistry', choices=['r9', 'r9.4'], default='r9.4')
+parser.add_argument("--weights",default="None")
+parser.add_argument('--Nbases', choices = ["4","5"],default='4')
 parser.add_argument('--output', type=str, default="output.fasta")
 parser.add_argument('--directory', type=str, default='', help="Directory where read files are stored")
 parser.add_argument('--watch', type=str, default='', help='Watched directory')
@@ -95,15 +97,23 @@ assert len(args.reads) != 0 or len(args.directory) != 0 or len(args.watch) != 0,
 
 ntwks = {"r9": os.path.join("networks", "r9.pkl"), "r9.4": os.path.join("networks", "r94.pkl")}
 
+alph = "ACGTN"
+if args.Nbases == "5":
+    alph = "ACGTBN"
+
 ntwk = Rnn()
-ntwk.load(ntwks[args.chemistry])
+if args.weights == "None":
+    ntwk.load(ntwks[args.chemistry])
+else:
+    ntwk.load(args.weights)
+
 
 if len(args.reads) or len(args.directory) != 0:
   fo = open(args.output, "w")
 
   files = args.reads
   if len(args.directory):
-    files += [os.path.join(args.directory, x) for x in os.listdir(args.directory)]  
+    files += [os.path.join(args.directory, x) for x in os.listdir(args.directory)]
 
   total_events = 0
   start_time = datetime.datetime.now()
