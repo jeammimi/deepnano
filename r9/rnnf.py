@@ -91,7 +91,6 @@ class Rnn:
 
         with open(fn, "rb") as f:
             package = np.load(f)
-            print(package.keys(),len(package.keys()))
             #print(arr.keys())
             #for i in range(3 * 20 + 4):
             #    package['arr_%d' % i] = np.array(pickle.load(f), dtype=np.float32)
