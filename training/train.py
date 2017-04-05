@@ -72,6 +72,8 @@ if __name__ == '__main__':
   n_classes = len(mapping.keys())
 
   list_files = []
+  subseq_size = 400
+
   for folder in sys.argv[3:]:
       list_files += glob.glob(folder + "/*")
   for fn in list_files:
@@ -81,8 +83,7 @@ if __name__ == '__main__':
     if len(ref) > 30000:
       print "out", len(ref)
       continue
-    refs.append(ref.strip())
-    names.append(fn)
+
     X = []
     Y = []
     Y2 = []
@@ -91,6 +92,12 @@ if __name__ == '__main__':
       X.append(map(float, its[:-1]))
       Y.append(mapping[its[-1][0]])
       Y2.append(mapping[its[-1][1]])
+
+    if len(X) < subseq_size:
+        print "out (too small (to include must set a smaller subseq_size))" , fn
+        continue
+    refs.append(ref.strip())
+    names.append(fn)
     data_x.append(np.array(X, dtype=np.float32))
     data_y.append(np.array(Y, dtype=np.int32))
     data_y2.append(np.array(Y2, dtype=np.int32))
@@ -105,7 +112,6 @@ if __name__ == '__main__':
 
   s_arr = []
   p_arr = []
-  subseq_size = 400
   for s in range(len(data_x)):
     s_arr += [s]
     p_arr += [len(data_x[s]) - subseq_size]
@@ -126,7 +132,7 @@ if __name__ == '__main__':
   for epoch in range(1000):
     print("Epoch",epoch)
     if (epoch % 20 == 0 and epoch > 0) or (epoch == 0):
-      p = Pool(8)
+      p = Pool(5)
       new_labels = p.map(realign, range(len(data_x)))
       for i in range(len(new_labels)):
         data_y[i] = new_labels[i][0]
