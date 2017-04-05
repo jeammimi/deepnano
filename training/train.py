@@ -71,7 +71,9 @@ if __name__ == '__main__':
 
   n_classes = len(mapping.keys())
 
-  list_files = glob.glob(sys.argv[3] + "/*")
+  list_files = []
+  for folder in sys.argv[3:]:
+      list_files += glob.glob(folder + "/*")
   for fn in list_files:
     print(fn)
     f = open(fn)

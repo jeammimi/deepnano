@@ -45,9 +45,9 @@ for i, l in enumerate(finput):
     std = events["stdv"]
     length = events["length"]
     X = scale(np.array(np.vstack([mean, mean*mean, std, length]).T, dtype=np.float32))
-
+    g = 0
     for e,(mean,meansqr,std,length) in zip(events,X):
-
+      g += 1
       print >>fo, " ".join(map(str, [mean,meansqr,std,length])),
       move = e["move"]
 
@@ -57,6 +57,13 @@ for i, l in enumerate(finput):
         print >>fo, "N%s" % t_to_b(e["model_state"][2])
       if move == 2:
         print >>fo, "%s%s" % (t_to_b(e["model_state"][1]), t_to_b(e["model_state"][2]))
+      if move in [3,4,5]:
+        print >>fo, "%s%s" % (t_to_b(e["model_state"][1]), t_to_b(e["model_state"][2]))
+      if move not in [0,1,2]:
+          print("Problem move value =",move,e["model_state"],g,i)
+          print(filename)
+          #exit()
+
   if args.type == 'comp':
     scale, scale_sd, shift, drift = extract_scaling(h5, "complement", base_loc)
     events = h5[base_loc+"/BaseCalled_%s/Events" % "complement"]
@@ -74,6 +81,12 @@ for i, l in enumerate(finput):
         print >>fo, "N%s" % t_to_b(e["model_state"][2])
       if move == 2:
         print >>fo, "%s%s" % (t_to_b(e["model_state"][1]), t_to_b(e["model_state"][2]))
+      if move in [3,4,5]:
+        print >>fo, "%s%s" % (t_to_b(e["model_state"][1]), t_to_b(e["model_state"][2]))
+      if move not in [0,1,2]:
+        print("Problem move value =",move)
+        print(filename)
+        exit()
   if args.type == '2d':
     tscale, tscale_sd, tshift, tdrift = extract_scaling(h5, "template", base_loc)
     cscale, cscale_sd, cshift, cdrift = extract_scaling(h5, "complement", base_loc)

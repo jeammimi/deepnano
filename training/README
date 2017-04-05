@@ -22,7 +22,7 @@ Training
 
 `OMP_NUM_THREADS=1 python train.py <starting network> <n_bases> <directory_with_files>`
 ex:
-python train.py ../r9/networks/r9.pkl 5 ../Test2/InTraining
+python train.py ../r9/networks/r9.pkl 5 ../Test2/InTraining ../Test2/InTraining2 ./Test2/InTraining3  
 
 Use starting network from ../nets_data/ (map6temp/map6comp/map6-2d-big)
 
