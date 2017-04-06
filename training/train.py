@@ -25,7 +25,12 @@ def flatten2(x):
 
 def realign(s):
   ps = s
-  o1, o2 = ntwk.tester(data_x[ps])
+  try:
+      o1, o2 = ntwk.tester(data_x[ps])
+  except:
+      o1, o2 = ntwk.predict(np.array([data_x[ps]]))
+      o1 = o1[0]
+      o2 = o2[0]
   o1m = (np.argmax(o1, 1))
   o2m = (np.argmax(o2, 1))
   f = open(base_dir+"tmpb-%s.in" % s, "w")
@@ -106,9 +111,7 @@ if __name__ == '__main__':
   sys.stdout.flush()
   #print(len(refs[0]),len(data_x[0]),len(data_y[0]))
   #exit()
-  ntwk = Rnn(sys.argv[1], n_classes=n_classes)
 
-  print ("net rdy")
 
   s_arr = []
   p_arr = []
@@ -129,72 +132,167 @@ if __name__ == '__main__':
   n_batches = len(data_x) / batch_size
   print len(data_x), batch_size, n_batches, datetime.datetime.now()
 
-  for epoch in range(1000):
-    print("Epoch",epoch)
-    if (epoch % 20 == 0 and epoch > 0) or (epoch == 0):
-      p = Pool(5)
-      new_labels = p.map(realign, range(len(data_x)))
-      for i in range(len(new_labels)):
-        data_y[i] = new_labels[i][0]
-        data_y2[i] = new_labels[i][1]
+  classical = False
+  if classical:
+      ntwk = Rnn(sys.argv[1], n_classes=n_classes)
 
-    taken_gc = []
-    out_gc = []
-    tc = 0
-    tc2 = 0
-    tc3 = 0
-    o1mm = []
-    y1mm = []
-    o2mm = []
-    y2mm = []
-    for s in range(len(data_x)):
-      s2 = np.random.choice(s_arr, p=p_arr)
-      r = np.random.randint(0, data_x[s2].shape[0] - subseq_size)
-      x = data_x[s2][r:r+subseq_size]
-      #    x[:,0] += np.random.binomial(n=1, p=0.1, size=x.shape[0]) * np.random.normal(scale=0.01, size=x.shape[0])
-      y = data_y[s2][r:r+subseq_size]
-      y2 = data_y2[s2][r:r+subseq_size]
+      print ("net rdy")
 
-      lr = 1e-2
-  #    if epoch >= 3:
-  #      lr = 2e-1
-  #    if epoch >= 50:
-  #      lr = 2e-1
-      #print(x.shape,y.shape,y2.shape)
-      if epoch >= 970:
-        lr = 1e-3
-      if epoch < 100:
-          cost, o1, o2 = ntwk.trainer_reduced(x, y, y2, np.array(lr,dtype=np.float32))
-      else:
-          lr = 5e-3
-          cost, o1, o2 = ntwk.trainer(x, y, y2, np.array(lr,dtype=np.float32))
+      for epoch in range(1000):
+        print("Epoch",epoch)
+        if (epoch % 20 == 0 and epoch > 0) :#or (epoch == 0):
+          p = Pool(5)
+          new_labels = p.map(realign, range(len(data_x)))
+          for i in range(len(new_labels)):
+            data_y[i] = new_labels[i][0]
+            data_y2[i] = new_labels[i][1]
+
+        taken_gc = []
+        out_gc = []
+        tc = 0
+        tc2 = 0
+        tc3 = 0
+        o1mm = []
+        y1mm = []
+        o2mm = []
+        y2mm = []
+        for s in range(len(data_x)):
+          s2 = np.random.choice(s_arr, p=p_arr)
+          r = np.random.randint(0, data_x[s2].shape[0] - subseq_size)
+          x = data_x[s2][r:r+subseq_size]
+          #    x[:,0] += np.random.binomial(n=1, p=0.1, size=x.shape[0]) * np.random.normal(scale=0.01, size=x.shape[0])
+          y = data_y[s2][r:r+subseq_size]
+          y2 = data_y2[s2][r:r+subseq_size]
+
+          lr = 1e-2
+      #    if epoch >= 3:
+      #      lr = 2e-1
+      #    if epoch >= 50:
+      #      lr = 2e-1
+          #print(x.shape,y.shape,y2.shape)
+
+          if epoch >= 970:
+            lr = 1e-3
+
+          if epoch < 0:
+              cost, o1, o2 = ntwk.trainer_reduced(x, y, y2, np.array(lr,dtype=np.float32))
+          else:
+              #lr = 5e-3
+              cost, o1, o2 = ntwk.trainer(x, y, y2, np.array(lr,dtype=np.float32))
 
 
-      tc += cost
+          tc += cost
 
-      o1m = (np.argmax(o1, 1))
-      o2m = (np.argmax(o2, 1))
+          o1m = (np.argmax(o1, 1))
+          o2m = (np.argmax(o2, 1))
 
-      o1mm += list(o1m)
-      o2mm += list(o2m)
-      y1mm += list(y)
-      y2mm += list(y2)
+          o1mm += list(o1m)
+          o2mm += list(o2m)
+          y1mm += list(y)
+          y2mm += list(y2)
 
-      tc2 += np.sum(np.equal(o1m, y))
-      tc3 += np.sum(np.equal(o2m, y2))
-      sys.stdout.write('\r%d' % s)
-      sys.stdout.flush()
+          tc2 += np.sum(np.equal(o1m, y))
+          tc3 += np.sum(np.equal(o2m, y2))
+          sys.stdout.write('\r%d' % s)
+          sys.stdout.flush()
 
-    print
+        print
 
-    print epoch, tc / n_batches, 1.*tc2 / n_batches / batch_size, 1.*tc3 / n_batches / batch_size, datetime.datetime.now()
-    print_stats(o1mm)
-    print_stats(o2mm)
-    print confusion_matrix(y1mm, o1mm)
-    print confusion_matrix(y2mm, o2mm)
+        print epoch, tc / n_batches, 1.*tc2 / n_batches / batch_size, 1.*tc3 / n_batches / batch_size, datetime.datetime.now()
+        print_stats(o1mm)
+        print_stats(o2mm)
+        print confusion_matrix(y1mm, o1mm)
+        print confusion_matrix(y2mm, o2mm)
 
-  #  print "out", np.min(out_gc), np.median(out_gc), np.max(out_gc), len(out_gc)
-    sys.stdout.flush()
+      #  print "out", np.min(out_gc), np.median(out_gc), np.max(out_gc), len(out_gc)
+        sys.stdout.flush()
 
-    if epoch % 20 == 2:
-      ntwk.save(base_dir+"dumpx-%d.npz" % epoch)
+        if epoch % 20 == 2:
+          ntwk.save(base_dir+"dumpx-%d.npz" % epoch)
+
+  else:
+      from rnnbis import model as ntwk
+
+
+      for epoch in range(1000):
+        print("Epoch",epoch)
+        if (epoch % 40 == 0 and epoch > 0) :#or (epoch == 0):
+          p = Pool(5)
+          new_labels = p.map(realign, range(len(data_x)))
+          for i in range(len(new_labels)):
+            data_y[i] = new_labels[i][0]
+            data_y2[i] = new_labels[i][1]
+
+        taken_gc = []
+        out_gc = []
+        tc = 0
+        tc2 = 0
+        tc3 = 0
+        o1mm = []
+        y1mm = []
+        o2mm = []
+        y2mm = []
+        X_new = []
+        Y_new = []
+        Y2_new = []
+        stats = defaultdict(int)
+        for s in range(len(data_x)):
+          s2 = np.random.choice(s_arr, p=p_arr)
+          r = np.random.randint(0, data_x[s2].shape[0] - subseq_size)
+          x = data_x[s2][r:r+subseq_size]
+          #    x[:,0] += np.random.binomial(n=1, p=0.1, size=x.shape[0]) * np.random.normal(scale=0.01, size=x.shape[0])
+          def domap(base):
+              ret = [0 for b in range(n_classes)]
+              ret[base] = 1
+              return ret
+
+
+          for xx in data_y2[s2][r:r+subseq_size]:
+            stats[xx] += 1
+          y = [domap(base) for base in data_y[s2][r:r+subseq_size]]
+          y2 = [domap(base) for base in data_y2[s2][r:r+subseq_size]]
+
+          X_new.append(x)
+          Y_new.append(y)
+          Y2_new.append(y2)
+
+
+
+        X_new = np.array(X_new)
+        Y_new = np.array(Y_new)
+        Y2_new = np.array(Y2_new)
+        print (X_new.shape,Y_new.shape)
+        sum1 = 0
+        for k in stats.keys():
+            sum1 += stats[k]
+        weight = {}
+        for k in stats.keys():
+            weight[k] = stats[k] / 1.0 / sum1
+            weight[k] = 1/weight[k]
+
+        print (stats,weight)
+
+        try:
+            ntwk.fit(X_new,[Y_new,Y2_new],epochs=1, batch_size=10)
+        except:
+            #To balance class weight
+
+
+            ntwk.fit(X_new,[Y_new,Y2_new],nb_epoch=1, batch_size=10,validation_split=0.05,
+               class_weight = { 'out_layer1': {0:1,1:1,2:1,3:1,4:1,5:1,6:1 } ,
+                                'out_layer2': weight})
+        ntwk.save('my_model.h5')
+
+
+
+        print epoch, tc / n_batches, 1.*tc2 / n_batches / batch_size, 1.*tc3 / n_batches / batch_size, datetime.datetime.now()
+        print_stats(o1mm)
+        print_stats(o2mm)
+        print confusion_matrix(y1mm, o1mm)
+        print confusion_matrix(y2mm, o2mm)
+
+      #  print "out", np.min(out_gc), np.median(out_gc), np.max(out_gc), len(out_gc)
+        sys.stdout.flush()
+
+        if epoch % 20 == 2:
+          ntwk.save(base_dir+"dumpx-%d.npz" % epoch)
