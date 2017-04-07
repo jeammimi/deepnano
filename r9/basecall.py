@@ -122,7 +122,7 @@ else:
 
     from keras.models import load_model
     from rnnbis import model as ntwk
-    ntwk.load_weights("../training/my_model_weights.h5")
+    ntwk.load_weights(args.weights)
     print("loaded")
 
 

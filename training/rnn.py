@@ -76,6 +76,7 @@ class Rnn:
     last_output = self.input
     last_size = package['arr_0'].shape[0]
     hidden_size = package['arr_0'].shape[1]
+
     par_index = 0
     for i in range(n_layers):
       layer = BiSimpleLayer(last_output, last_size, hidden_size)

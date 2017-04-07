@@ -278,10 +278,11 @@ if __name__ == '__main__':
             #To balance class weight
 
 
-            ntwk.fit(X_new,[Y_new,Y2_new],nb_epoch=1, batch_size=10,validation_split=0.05,
-               class_weight = { 'out_layer1': {0:1,1:1,2:1,3:1,4:1,5:1,6:1 } ,
-                                'out_layer2': weight})
-        ntwk.save_weights('my_model_weights.h5')
+            ntwk.fit(X_new,[Y_new,Y2_new],nb_epoch=1, batch_size=10,validation_split=0.05)#,
+            #   class_weight = { 'out_layer1': {0:1,1:1,2:1,3:1,4:1,5:1,6:1 } ,
+            #                    'out_layer2': weight})
+        ntwk.save_weights(base_dir+'/my_model_weights.h5')
+
 
 
 
