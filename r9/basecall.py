@@ -41,7 +41,7 @@ def get_events(h5):
   return extract_events(h5, args.chemistry)
 
 def basecall(filename, output_file):
-  try:
+  #try:
     h5 = h5py.File(filename, "r")
     events = get_events(h5)
     if events is None:
@@ -54,13 +54,22 @@ def basecall(filename, output_file):
       h5.close()
       return 0
 
-    events = events[50:-50]
+    #print(len(events))
+    events = events[1:-1]
     mean = events["mean"]
     std = events["stdv"]
     length = events["length"]
     X = scale(np.array(np.vstack([mean, mean*mean, std, length]).T, dtype=np.float32))
+    try:
+        o1, o2 = ntwk.predict(np.array(X)[np.newaxis,::,::])
+        o1 = o1[0]
+        o2 = o2[0]
+        #for i in o2[:20]:
+            #print(["%.2f"%ii for ii in i])
+        #print(o2)
+    except:
+        o1, o2 = ntwk.predict(X)
 
-    o1, o2 = ntwk.predict(X)
     o1m = (np.argmax(o1, 1))
     o2m = (np.argmax(o2, 1))
     om = np.vstack((o1m,o2m)).reshape((-1,),order='F')
@@ -71,7 +80,7 @@ def basecall(filename, output_file):
 
     h5.close()
     return len(events)
-  except Exception as e:
+  #except Exception as e:
     print "Read %s failed with %s" % (filename, e)
     return 0
 
@@ -84,15 +93,15 @@ parser.add_argument('--Nbases', choices = ["4","5"],default='4')
 parser.add_argument('--output', type=str, default="output.fasta")
 parser.add_argument('--directory', type=str, default='', help="Directory where read files are stored")
 parser.add_argument('--watch', type=str, default='', help='Watched directory')
-parser.add_argument('reads', type=str, nargs='*')
 parser.add_argument('--debug', dest='debug', action='store_true')
 parser.add_argument('--no-debug', dest='debug', action='store_false')
-parser.add_argument('--event-detect', dest='event_detect', action='store_true')
+parser.add_argument('--event-detect',dest='event_detect', action='store_true')
+parser.add_argument('reads', type=str, nargs='*')
+
 parser.set_defaults(debug=False)
 parser.set_defaults(event_detect=False)
 
 args = parser.parse_args()
-
 assert len(args.reads) != 0 or len(args.directory) != 0 or len(args.watch) != 0, "Nothing to basecall"
 
 ntwks = {"r9": os.path.join("networks", "r9.pkl"), "r9.4": os.path.join("networks", "r94.pkl")}
@@ -100,12 +109,21 @@ ntwks = {"r9": os.path.join("networks", "r9.pkl"), "r9.4": os.path.join("network
 alph = "ACGTN"
 if args.Nbases == "5":
     alph = "ACGTBN"
-
-ntwk = Rnn()
-if args.weights == "None":
-    ntwk.load(ntwks[args.chemistry])
+classical = False
+if classical:
+    ntwk = Rnn()
+    if args.weights == "None":
+        ntwk.load(ntwks[args.chemistry])
+    else:
+        ntwk.load(args.weights)
 else:
-    ntwk.load(args.weights)
+    import sys
+    sys.path.append("../training/")
+
+    from keras.models import load_model
+    from rnnbis import model as ntwk
+    ntwk.load_weights("../training/my_model_weights.h5")
+    print("loaded")
 
 
 if len(args.reads) or len(args.directory) != 0:
