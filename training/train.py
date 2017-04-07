@@ -213,10 +213,10 @@ if __name__ == '__main__':
   else:
       from rnnbis import model as ntwk
 
-
+      #ntwk.load_weights("./my_model_weights.h5")
       for epoch in range(1000):
         print("Epoch",epoch)
-        if (epoch % 40 == 0 and epoch > 0) :#or (epoch == 0):
+        if (epoch % 4000 == 0 and epoch > 0) :#or (epoch == 0):
           p = Pool(5)
           new_labels = p.map(realign, range(len(data_x)))
           for i in range(len(new_labels)):
@@ -277,9 +277,9 @@ if __name__ == '__main__':
         except:
             #To balance class weight
 
-
-            ntwk.fit(X_new,[Y_new,Y2_new],nb_epoch=1, batch_size=10,validation_split=0.05)#,
-            #   class_weight = { 'out_layer1': {0:1,1:1,2:1,3:1,4:1,5:1,6:1 } ,
+            weight[3] *= 10
+            ntwk.fit(X_new,[Y_new,Y2_new],nb_epoch=1, batch_size=10,validation_split=0.05)
+             #  class_weight = { 'out_layer1': {0:1,1:1,2:1,3:1,4:1,5:1,6:1 } ,
             #                    'out_layer2': weight})
         ntwk.save_weights(base_dir+'/my_model_weights.h5')
 
