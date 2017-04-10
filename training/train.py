@@ -9,6 +9,7 @@ from sklearn.metrics import confusion_matrix
 import theano as th
 from multiprocessing import Pool
 import glob
+import keras
 
 
 
@@ -214,7 +215,7 @@ if __name__ == '__main__':
       from rnnbis import model as ntwk
 
       #ntwk.load_weights("./my_model_weights.h5")
-      for epoch in range(1000):
+      for epoch in range(100):
         print("Epoch",epoch)
         if (epoch % 4000 == 0 and epoch > 0) :#or (epoch == 0):
           p = Pool(5)
@@ -249,6 +250,7 @@ if __name__ == '__main__':
 
           for xx in data_y2[s2][r:r+subseq_size]:
             stats[xx] += 1
+
           y = [domap(base) for base in data_y[s2][r:r+subseq_size]]
           y2 = [domap(base) for base in data_y2[s2][r:r+subseq_size]]
 
@@ -265,24 +267,39 @@ if __name__ == '__main__':
         sum1 = 0
         for k in stats.keys():
             sum1 += stats[k]
-        weight = {}
-        for k in stats.keys():
-            weight[k] = stats[k] / 1.0 / sum1
-            weight[k] = 1/weight[k]
 
-        print (stats,weight)
+        if epoch == 0:
+            weight = {}
+            for k in stats.keys():
+                weight[k] = stats[k] / 1.0 / sum1
+                weight[k] = 1/weight[k]
+        #weight[4] *= 100
+
+
+        w2 = []
+
+        for y in Y2_new:
+            w2.append([])
+            for arr in y:
+                w2[-1].append(weight[np.argmax(arr)])
+
+        w2 = np.array(w2)
+        print (w2.shape)
+        print (weight)
 
         try:
             ntwk.fit(X_new,[Y_new,Y2_new],epochs=1, batch_size=10)
         except:
             #To balance class weight
+            reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
+                  patience=5, min_lr=0.05)
+            ntwk.fit(X_new,[Y_new,Y2_new],nb_epoch=1, batch_size=10,validation_split=0.05,
+                    sample_weight = { "out_layer2" : w2},callbacks=[reduce_lr])
 
-            weight[3] *= 10
-            ntwk.fit(X_new,[Y_new,Y2_new],nb_epoch=1, batch_size=10,validation_split=0.05)
-             #  class_weight = { 'out_layer1': {0:1,1:1,2:1,3:1,4:1,5:1,6:1 } ,
-            #                    'out_layer2': weight})
-        ntwk.save_weights(base_dir+'/my_model_weights.h5')
-
+            #if epoch == 0:
+            #    ntwk.fit(X_new,[Y_new,Y2_new],nb_epoch=1, batch_size=10,validation_split=0.05)
+        if i % 10 == 0:
+            ntwk.save_weights(base_dir+'/my_model_weights-%i.h5'%epoch)
 
 
 

@@ -34,9 +34,13 @@ for i, l in enumerate(finput):
   print >>fo, t_to_b(ref)
   base_loc = get_base_loc(h5)
 
-  if args.type == 'temp':
+  if args.type in ['temp','comp']:
     #scale, scale_sd, shift, drift = extract_scaling(h5, "template", base_loc)
-    events = h5[base_loc+"/BaseCalled_%s/Events" % "template"]
+    if args.type == "temp":
+        events = h5[base_loc+"/BaseCalled_%s/Events" % "template"]
+    else:
+        events = h5[base_loc+"/BaseCalled_%s/Events" % "complement"]
+
     index = 0.0
     data = []
 
@@ -64,29 +68,6 @@ for i, l in enumerate(finput):
           print(filename)
           #exit()
 
-  if args.type == 'comp':
-    scale, scale_sd, shift, drift = extract_scaling(h5, "complement", base_loc)
-    events = h5[base_loc+"/BaseCalled_%s/Events" % "complement"]
-    index = 0.0
-    data = []
-    for e in events:
-      mean = (e["mean"] - shift) / scale
-      stdv = e["stdv"] / scale_sd
-      length = e["length"]
-      print >>fo, " ".join(map(str, preproc_event(mean, stdv, length))),
-      move = e["move"]
-      if move == 0:
-        print >>fo, "NN"
-      if move == 1:
-        print >>fo, "N%s" % t_to_b(e["model_state"][2])
-      if move == 2:
-        print >>fo, "%s%s" % (t_to_b(e["model_state"][1]), t_to_b(e["model_state"][2]))
-      if move in [3,4,5]:
-        print >>fo, "%s%s" % (t_to_b(e["model_state"][1]), t_to_b(e["model_state"][2]))
-      if move not in [0,1,2]:
-        print("Problem move value =",move)
-        print(filename)
-        exit()
   if args.type == '2d':
     tscale, tscale_sd, tshift, tdrift = extract_scaling(h5, "template", base_loc)
     cscale, cscale_sd, cshift, cdrift = extract_scaling(h5, "complement", base_loc)
