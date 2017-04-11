@@ -215,7 +215,7 @@ if __name__ == '__main__':
       from rnnbis import model as ntwk
 
       #ntwk.load_weights("./my_model_weights.h5")
-      for epoch in range(100):
+      for epoch in range(1000):
         print("Epoch",epoch)
         if (epoch % 4000 == 0 and epoch > 0) :#or (epoch == 0):
           p = Pool(5)
@@ -292,7 +292,7 @@ if __name__ == '__main__':
         except:
             #To balance class weight
             reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
-                  patience=5, min_lr=0.05)
+                  patience=5, min_lr=0.1)
             ntwk.fit(X_new,[Y_new,Y2_new],nb_epoch=1, batch_size=10,validation_split=0.05,
                     sample_weight = { "out_layer2" : w2},callbacks=[reduce_lr])
 
