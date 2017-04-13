@@ -59,6 +59,14 @@ def realign(s):
 
 if __name__ == '__main__':
 
+    import argparse
+
+    data_x = []
+    data_y = []
+    data_y2 = []
+    refs = []
+    names = []
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--Nbases', choices=["4", "5"], default='4')
     parser.add_argument('--TWeight', type=float, default=1)
