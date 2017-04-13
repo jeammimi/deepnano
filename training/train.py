@@ -269,10 +269,17 @@ if __name__ == '__main__':
 
             if epoch == 0:
                 weight = {}
+                suma = 0
                 for k in stats.keys():
                     weight[k] = stats[k] / 1.0 / sum1
                     weight[k] = 1 / weight[k]
-            #weight[4] *= 100
+
+                    if k == 3:
+                        weight[k] *= args.TWeight
+                    suma += weight[k]
+                for k in stats.keys():
+                    weight[k] = weight[k] * len(weight.keys()) / suma
+#weight[4] *= 100
 
             w2 = []
 
