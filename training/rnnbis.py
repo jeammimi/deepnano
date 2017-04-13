@@ -46,6 +46,6 @@ loss_out = Lambda(ctc_lambda_func, output_shape=(1,), name='ctc')(
 
 model2 = Model(inputs=[inputs, labels, input_length, label_length], outputs=loss_out)
 
-sgd = SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
+sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
 #rms = RMSprop(lr=0.0005, rho=0.9, epsilon=1e-08, decay=0.0, clipvalue=0.05)
 model2.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer=sgd)
