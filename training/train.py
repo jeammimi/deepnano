@@ -61,6 +61,13 @@ def realign(s):
 
 if __name__ == '__main__':
 
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--Nbases', choices=["4", "5"], default='4')
+    parser.add_argument('directories', type=str, nargs='*')
+    args = parser.parse_args()
+
     data_x = []
     data_y = []
     data_y2 = []
@@ -69,23 +76,22 @@ if __name__ == '__main__':
     refs = []
     names = []
 
-    if sys.argv[2] == "4":
+    if args.Nbases == "4":
         mapping = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}  # Modif
-    elif sys.argv[2] == "5":
+    elif args.Nbases == "5":
         mapping = {"A": 0, "C": 1, "G": 2, "T": 3, "B": 4, "N": 5}  # Modif
-    else:
-        print("Unkwon mapping length")
-        exit()
 
     n_classes = len(mapping.keys())
 
     list_files = []
-    subseq_size = 400
+    subseq_size = 20
 
-    for folder in sys.argv[3:]:
+    for folder in args.directories:
         list_files += glob.glob(folder + "/*")
+
     list_files = list_files
 
+    list_files.sort()
     load = True
     if load is None:
         for fn in list_files:
@@ -117,16 +123,21 @@ if __name__ == '__main__':
             data_y.append(np.array(Y, dtype=np.int32))
             data_y2.append(np.array(Y2, dtype=np.int32))
             seq = "".join(seq)
+            seq = seq[1::2]
+
             data_index.append(np.arange(len(seq))[np.array([s for s in seq]) != "N"])
             seqs = seq.replace("N", "")
-            data_alignment.append(pairwise2.align.globalxx(ref, seqs)[0][:2])
-            print(len(seqs), len(ref))
+            alignments = pairwise2.align.globalxx(ref, seqs)
+            data_alignment.append(alignments[0][:2])
+            #print(len(seqs), len(ref))
+            print len(alignments[0][0]), len(ref), len(seqs), alignments[0][2:]
+
         import cPickle
-        with open("Allignements", "wb") as f:
+        with open("Allignements-bis", "wb") as f:
             cPickle.dump([data_x, data_y, data_y2, data_index, data_alignment, refs, names], f)
     else:
         import cPickle
-        with open("Allignements", "rb") as f:
+        with open("Allignements-bis", "rb") as f:
             data_x, data_y, data_y2, data_index, data_alignment, refs, names = cPickle.load(f)
 
     print("done", sum(len(x) for x in refs))
@@ -145,7 +156,7 @@ if __name__ == '__main__':
         p_arr[i] = 1. * p_arr[i] / sum_p
 
     base_dir = str(datetime.datetime.now())
-    #base_dir = "compensate_bis"
+    # base_dir = "compensate_bis"
     base_dir = base_dir.replace(' ', '_')
 
     os.mkdir(base_dir)
@@ -263,6 +274,7 @@ if __name__ == '__main__':
             count = 0
             # print(s1,s2)
             startf = False
+            end = None
             for N, (c1, c2) in enumerate(zip(s1, s2)):
                 # print(count)
                 if count == start_index_on_seqs and not startf:
@@ -274,11 +286,13 @@ if __name__ == '__main__':
 
                 if c2 != "-":
                     count += 1
+
             # print(start,end)
-            return s1[start:end].replace("-", "")
+
+            return s1[start:end].replace("-", ""), s1[start:end], s2[start:end]
 
     # ntwk.load_weights("./my_model_weights.h5")
-        for epoch in range(1000):
+        for epoch in range(10000):
             print("Epoch", epoch)
             if (epoch % 4000 == 0 and epoch > 0):  # or (epoch == 0):
                 p = Pool(5)
@@ -321,36 +335,46 @@ if __name__ == '__main__':
                 y2 = [domap(base) for base in data_y2[s2][r:r + subseq_size]]
 
                 if not boring:
-                    length = 2 * subseq_size
+                    length = subseq_size
                     start = r
                     Index = data_index[s2]
                     alignment = data_alignment[s2]
 
                     start_index_on_seqs = find_closest(start, Index)
                     end_index_on_seqs = find_closest(start + length, Index)
+                    #from IPython import embed
+                    # embed()
+                    #print(start, start_index_on_seqs, end_index_on_seqs, len(alignment))
+                    seg, ss1, ss2 = get_segment(alignment, start_index_on_seqs, end_index_on_seqs)
 
-                    s = get_segment(alignment, start_index_on_seqs, end_index_on_seqs)
-
-                    maxi = 500
-                    l = min(max(len(s), 1), maxi)
-                    if l < 20:
+                    maxi = 20
+                    l = min(max(len(seg), 1), maxi - 1)
+                    if abs(len(ss2.replace("-", "")) - len(ss2)) + abs(len(ss1.replace("-", "")) - len(ss1)) > 5:
                         continue
                     Length.append(l)
 
                     # print(len(s))
-                    if len(s) > maxi:
-                        s = s[:maxi]
-                    s = s + "A" * (maxi - len(s))
+                    if len(seg) > maxi - 1:
+                        seg = seg[:maxi - 1]
+                    seg = seg + "A" * (maxi - len(seg))
                     if "B" in refs[s2]:
-                        s = s.replace("T", "B")
+                        seg = seg.replace("T", "B")
                     # print(len(s))
                     # print(s)
                     # print([base for base in s])
-                    Label.append([mapping[base] for base in s])
+                    Label.append([mapping[base] for base in seg])
                 X_new.append(x)
                 Y_new.append(y)
                 Y2_new.append(y2)
+                """
+                print("Alg")
+                print(ss1)
+                print(ss2)
+                print(seg)
+                alph = "ACGTBN"
 
+                print("".join([alph[ind] for ind in data_y2[s2][r:r + subseq_size]]))
+            exit()"""
             X_new = np.array(X_new)
             Y_new = np.array(Y_new)
             Y2_new = np.array(Y2_new)
@@ -379,10 +403,11 @@ if __name__ == '__main__':
                     w2[-1].append(weight[np.argmax(arr)])
 
             w2 = np.array(w2)
+            """
             print(w2.shape)
             print(weight)
             print(Length)
-
+            """
             try:
                 ntwk.fit(X_new, [Y_new, Y2_new], epochs=1, batch_size=10)
             except:
@@ -397,7 +422,21 @@ if __name__ == '__main__':
                     print(X_new.shape, Label.shape, np.array(
                         [length] * len(Length)).shape, Length.shape)
                     if epoch == 0:
-                        ntwk.load_weights("dumpx-22.npz")
+                        ntwk.load_weights("2017-04-14_15:53:11.406512/my_model_weights-999.h5")
+                        """
+                        import keras.backend as K
+                        y_pred = predictor.predict(X_new[:30])
+                        y_pred = np.concatenate(y_pred, axis=-1).reshape(30, 800, 6)
+                        print(y_pred.shape)
+
+                        input_length = np.array([2 * subseq_size] * 30)"""
+                        # p = K.ctc_decode(y_pred, input_length, greedy=False)
+                        # from IPython import embed
+                        # embed()
+                        # print(p[0].argmax(-1))
+
+                        # exit()
+
                     if epoch > -1:
                         test = False
                         if test:
@@ -416,7 +455,7 @@ if __name__ == '__main__':
                                     # ntwk.load_weights("my_model_weights-1.h5")
                                     ntwk.load_weights("tmp_not_nan-%i.h5" % ((i - 40) % 900))
                                     predictor.load_weights("tmp_not_nan-%i.h5" % ((i - 40) % 900))
-                                    #predictor.load_weights("tmp_not_nan-%i.h5" % ((i - 20) % 900))
+                                    # predictor.load_weights("tmp_not_nan-%i.h5" % ((i - 20) % 900))
                                     p = predictor.evaluate(X_new[i:i + batch],
                                                            [Y_new[i:i + batch], Y2_new[i:i + batch]])
                                     print(p)
@@ -430,10 +469,33 @@ if __name__ == '__main__':
                                     ntwk.save_weights("tmp_not_nan-%i.h5" % i)
                             ntwk.save_weights(base_dir + '/my_model_weights-%i.h5' % epoch)
                         else:
+                            maxin = 10 * (int(len(X_new) // 10) - 3)
+                            reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
+                                                                          patience=5, min_lr=0.0001)
                             print(len(data_x), np.mean(Length), np.max(Length))
-                            ntwk.fit([X_new, Label, np.array([2 * subseq_size] * len(Length)), Length],
-                                     Label, nb_epoch=1, batch_size=10)  # , validation_split=0.1)
-                            p = predictor.evaluate(X_new, [Y_new, Y2_new])
+                            ntwk.fit([X_new[:maxin], Label[:maxin], np.array([subseq_size] * len(Length))[:maxin], Length[:maxin]],
+                                     Label[:maxin], nb_epoch=1, batch_size=10, callbacks=[reduce_lr],
+                                     validation_data=([X_new[maxin:maxin + 30],
+                                                       Label[maxin:maxin + 30],
+                                                       np.array([subseq_size] *
+                                                                len(Length))[maxin:maxin + 30],
+                                                       Length[maxin:maxin + 30]],
+                                                      Label[maxin:maxin + 30]))
+
+                            import tensorflow as tf
+                            import keras.backend as K
+                            p = predictor.predict(X_new[:maxin])
+
+                            decoded, log_prob = K.ctc_decode(
+                                p, np.array([subseq_size] * len(Length))[:maxin])
+
+                            # Inaccuracy: label error rate
+                            """
+                            ler = tf.reduce_mean(tf.edit_distance(
+                                tf.cast(decoded[0], tf.int32), K.ctc_label_dense_to_sparse(Label[:maxin], Length[:maxin])))
+                            print(ler)
+                            """
+                            p = predictor.evaluate(X_new[:maxin], Y2_new[:maxin])
                             print(p)
                             if np.sum(np.isnan(p)) > 0:
                                 d = 0
