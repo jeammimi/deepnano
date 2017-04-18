@@ -84,7 +84,7 @@ if __name__ == '__main__':
     n_classes = len(mapping.keys())
 
     list_files = []
-    subseq_size = 20
+    subseq_size = 40
 
     for folder in args.directories:
         list_files += glob.glob(folder + "/*")
@@ -347,9 +347,9 @@ if __name__ == '__main__':
                     #print(start, start_index_on_seqs, end_index_on_seqs, len(alignment))
                     seg, ss1, ss2 = get_segment(alignment, start_index_on_seqs, end_index_on_seqs)
 
-                    maxi = 20
+                    maxi = 40
                     l = min(max(len(seg), 1), maxi - 1)
-                    if abs(len(ss2.replace("-", "")) - len(ss2)) + abs(len(ss1.replace("-", "")) - len(ss1)) > 5:
+                    if abs(len(ss2.replace("-", "")) - len(ss2)) + abs(len(ss1.replace("-", "")) - len(ss1)) > 10:
                         continue
                     Length.append(l)
 
@@ -422,7 +422,7 @@ if __name__ == '__main__':
                     print(X_new.shape, Label.shape, np.array(
                         [length] * len(Length)).shape, Length.shape)
                     if epoch == 0:
-                        ntwk.load_weights("2017-04-14_15:53:11.406512/my_model_weights-999.h5")
+                        ntwk.load_weights("ctc_weights.h5")
                         """
                         import keras.backend as K
                         y_pred = predictor.predict(X_new[:30])

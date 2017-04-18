@@ -8,7 +8,7 @@ from keras.optimizers import SGD, RMSprop
 from keras.layers.merge import Concatenate
 
 
-inputs = Input(shape=(20, 4))
+inputs = Input(shape=(40, 4))
 Nbases = 5 + 1
 size = 20
 
@@ -33,7 +33,7 @@ def ctc_lambda_func(args):
     return K.ctc_batch_cost(labels, y_pred, input_length, label_length, ctc_merge_repeated=False)
 
 
-labels = Input(name='the_labels', shape=[20], dtype='float32')
+labels = Input(name='the_labels', shape=[40], dtype='float32')
 input_length = Input(name='input_length', shape=[1], dtype='int64')
 label_length = Input(name='label_length', shape=[1], dtype='int64')
 
